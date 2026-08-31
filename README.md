@@ -30,7 +30,7 @@ M.I.B. SD card.
 | Train | `MHI2_ER_AU37x_P5089` |
 | MU | `MU1326` |
 | Part number | `8V1035036A` |
-| Car | Audi RS3 (8VA), Virtual Cockpit (`KI_FPK_AU37X`) |
+| Car | Audi A3 8V Sportback e-tron (2017), Virtual Cockpit (`KI_FPK_AU37X`) |
 | iAP2 stack | HARMAN (`mm-ipod` + `libiap2client.so.1`), Media 1.0.61.9 |
 
 Other `MHI2_ER_AU37x_*` builds are **expected** to work but are **not verified**, and the
