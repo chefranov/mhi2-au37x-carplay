@@ -17,12 +17,17 @@ echo "=== MHI2 AU37x CarPlay patches - M.I.B. launcher ==="
 
 # The card can be mounted under different names depending on the reader, so
 # look for our payload rather than assuming a path.
+# Globs, not `find`: this unit has no find at all (/bin holds 40 utilities and
+# that is not one of them), so a find-based search would fail silently and the
+# script would report "payload not found" for the wrong reason. The shell
+# expands these itself, and an unmatched pattern simply stays literal - the
+# -f tests below reject it.
 PAYLOAD=""
 for d in \
     "$(dirname "$0")/carplay" \
-    /fs/sda0/mod/carplay /fs/sda1/mod/carplay \
-    /fs/mmc0/mod/carplay /fs/mmc1/mod/carplay \
-    /mnt/sda0/mod/carplay /mnt/mmc0/mod/carplay
+    /fs/*/mod/carplay \
+    /mnt/*/mod/carplay \
+    /net/*/fs/*/mod/carplay
 do
     if [ -f "$d/install.sh" ] && [ -f "$d/bin/libcarplay_hook.so" ]; then
         PAYLOAD=$d
@@ -31,18 +36,10 @@ do
 done
 
 if [ -z "$PAYLOAD" ]; then
-    echo "  (not in the usual places, searching the card - may take a minute)"
-    for d in $(find /fs /mnt -maxdepth 4 -type d -name carplay 2>/dev/null); do
-        if [ -f "$d/install.sh" ] && [ -f "$d/bin/libcarplay_hook.so" ]; then
-            PAYLOAD=$d
-            break
-        fi
-    done
-fi
-
-if [ -z "$PAYLOAD" ]; then
     echo "!! payload not found."
-    echo "!! Expected /mod/carplay/install.sh and /mod/carplay/bin/ on the card."
+    echo "!! Expected /mod/carplay/install.sh and /mod/carplay/bin/ on the card,"
+    echo "!! with custom.sh itself at /mod/custom.sh."
+    echo "!! Looked under: $(dirname "$0")/carplay, /fs/*/mod, /mnt/*/mod, /net/*/fs/*/mod"
     exit 1
 fi
 
