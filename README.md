@@ -46,12 +46,16 @@ failure mode is worth understanding before you try:
   `libiap2client.so.1` by name. A different driver version fails softly: a line in the log,
   no cover art, nothing broken.
 
-Two checks on the unit before installing:
+Two checks on the unit before installing — **with an iPhone plugged in**:
 
 ```sh
 pidin ar | grep mm-ipod          # HARMAN iAP2 stack running?
 ls /ramdisk/pps/iap2/            # device, location, nowplaying, telephony
 ```
+
+`mm-ipod` is started when a device is connected, and `/ramdisk/pps/iap2/` only exists
+while it runs. With nothing plugged in, the first prints only your own `grep` and the
+second says *No such file or directory* — that is normal and tells you nothing.
 
 If there is no `mm-ipod` and `dio_manager` contains `NmeIAP2Message` symbols, you are on
 the Cinemo/Qualcomm stack (MHI2Q) — these binaries are not for you; see
@@ -89,10 +93,15 @@ Plug the USB-Ethernet adapter in; the unit comes up on **`172.16.250.248`**.
 
 ```sh
 # from your machine, in this repository
-ssh root@172.16.250.248 'mkdir -p /tmp/carplay'
-scp -O -r bin install.sh uninstall.sh root@172.16.250.248:/tmp/carplay/
-ssh root@172.16.250.248 'sh /tmp/carplay/install.sh'
+ssh root@172.16.250.248 'mount -uw /mnt/app; mkdir -p /mnt/app/root/carplay'
+scp -O -r bin install.sh uninstall.sh root@172.16.250.248:/mnt/app/root/carplay/
+ssh root@172.16.250.248 'sh /mnt/app/root/carplay/install.sh'
 ```
+
+**Do not stage the files under `/tmp`.** On this unit `/tmp` is a symlink to
+`/dev/shmem`, a flat shared-memory filesystem that has no directories at all —
+`mkdir /tmp/carplay` fails with *Function not implemented*. Any writable spot on
+`/mnt/app` works; the line above uses `/mnt/app/root/carplay`.
 
 (`-O` is needed on recent macOS/OpenSSH, which defaults to SFTP; the unit only speaks the
 legacy SCP protocol. Older systems: drop it. If the unit's host key is rejected, add
@@ -176,11 +185,44 @@ module 17 adaptation. The installer's own log is at `/tmp/carplay_install.log`.
 ## Uninstall
 
 ```sh
-ssh root@172.16.250.248 'sh /tmp/carplay/uninstall.sh'
+ssh root@172.16.250.248 'sh /mnt/app/root/carplay/uninstall.sh'
 ```
 
 or the `UNINSTALL` marker file described above. Reboot afterwards. The `.orig` backup is
 deliberately left behind; remove it by hand if you want no trace.
+
+## Troubleshooting
+
+**`./install.sh: No such file or directory` — but the file is right there and
+executable.** Also `: unknown optionset: -` and `install.sh[21]: set:`. The scripts have
+Windows line endings. `#!/bin/sh` became `#!/bin/sh\r`, so the shell looks for an
+interpreter that does not exist, and `set -u\r` is not a valid command either.
+
+Git on Windows converts to CRLF on checkout by default. This repository now pins LF for
+`*.sh` in `.gitattributes`, so **re-download it** (clone again, or Code → Download ZIP)
+and the copies will be correct. If you would rather fix the working copy you already
+have: `git config --global core.autocrlf input`, then delete the clone and clone again.
+
+If a broken copy is already on the unit, note that it has **no `sed`, no `awk` and no
+`tr`** — only `cat`, `cp`, `grep`, `cut`, `vi` and the shell. Strip the carriage returns
+with the shell itself:
+
+```sh
+CR=$(printf '\r')
+while IFS= read -r l; do printf '%s\n' "${l%$CR}"; done < install.sh > i.sh
+sh i.sh
+```
+
+**The M.I.B. custom script does nothing.** Same cause in most cases — a CRLF `custom.sh`
+dies before it prints anything. Otherwise check the layout on the card: the file M.I.B.
+runs is exactly `/mod/custom.sh`, and the payload must be at `/mod/carplay/` next to it,
+not inside it.
+
+**`mkdir: <name>: Function not implemented`.** You are somewhere under `/tmp`, which is
+`/dev/shmem` and holds no directories. Use a path on `/mnt/app` instead.
+
+**`Read-only filesystem`.** `mount -uw /mnt/app` and `mount -uw /mnt/system` — the
+installer does this itself, but a manual `cp` beforehand needs it too.
 
 ## Recovery
 
