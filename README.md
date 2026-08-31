@@ -17,7 +17,7 @@ M.I.B. SD card.
 
 ## Gallery
 
-<p align="center"><img src="docs/coverart.png" width="80%" /></p>
+<p align="center"><img src="docs/coverart.jpg" width="80%" /></p>
 
 <p align="center"><sub>CarPlay album art on the Virtual Cockpit — stock leaves this tile empty.</sub></p>
 
