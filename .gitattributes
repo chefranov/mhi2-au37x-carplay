@@ -1,0 +1,12 @@
+# The unit's shell must see LF. Git on Windows checks out CRLF by default
+# (core.autocrlf=true), which breaks these scripts in a way that is hard to
+# read: the shebang becomes "/bin/sh\r" so the file "does not exist", and
+# "set -u\r" fails as an unknown option. The head unit has no sed, awk or tr
+# to repair it afterwards, so pin the line endings here instead.
+*.sh text eol=lf
+
+# Payload - never touch these.
+*.jar binary
+*.so  binary
+*.jpg binary
+*.png binary
