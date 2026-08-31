@@ -25,7 +25,7 @@ M.I.B. SD card.
 
 **Tested on exactly one build:**
 
-| | |
+| Property | Value |
 |---|---|
 | Train | `MHI2_ER_AU37x_P5089` |
 | MU | `MU1326` |
