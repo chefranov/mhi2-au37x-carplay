@@ -81,6 +81,37 @@ uninstall is deleting the file.
 | `uninstall.sh` | Runs on the unit; puts everything back |
 | `custom.sh` | M.I.B. entry point — finds the payload on the card and calls the above |
 
+## Before you copy anything: Windows line endings
+
+If you are on Windows, **download this repository fresh** (clone again, or Code →
+Download ZIP). Earlier copies were checked out with CRLF line endings and every script in
+them fails on the unit; `.gitattributes` now pins LF, but it only affects new downloads.
+
+You have a CRLF copy if the unit answers like this:
+
+```
+: cannot execute - No such file or directory
+: unknown option
+install.sh[21]: set:
+```
+
+The one-line repair, if you would rather not re-download — it uses only the shell, since
+the unit has no `sed`, `awk` or `tr`:
+
+```sh
+CR=$(printf '\r'); while IFS= read -r l; do printf '%s\n' "${l%$CR}"; done < install.sh > i.sh && sh i.sh
+```
+
+After any download, check the payload arrived intact — these are exact sizes:
+
+```
+bin/libcarplay_hook.so   120683
+bin/coverart_hook.jar     24932
+bin/dpad_hook.jar         11108
+```
+
+Or skip the scripts entirely: see [Manual install](#manual-install--no-scripts).
+
 ## Install A — network cable
 
 Prerequisites, both from the M.I.B. menu:
@@ -133,6 +164,52 @@ the custom script again.
 > Give the writes a moment before rebooting — the installer calls `sync` and waits, but a
 > forced reboot immediately afterwards can still leave a file truncated, and you will be
 > left wondering why nothing loaded.
+
+## Manual install — no scripts
+
+Nine commands on the unit. Do this if the scripts give you trouble, or if you would rather
+see every change go by.
+
+```sh
+mount -uw /mnt/app
+mount -uw /mnt/system
+
+# 1. the jars
+cp bin/dpad_hook.jar     /mnt/app/eso/hmi/lsd/jars/
+cp bin/coverart_hook.jar /mnt/app/eso/hmi/lsd/jars/
+
+# 2. the native hook
+mkdir -p /mnt/app/eso/hmi/lib
+cp bin/libcarplay_hook.so /mnt/app/eso/hmi/lib/
+
+# 3. make all three readable (a jar lsd cannot read is skipped silently)
+chmod 755 /mnt/app/eso/hmi/lsd/jars/dpad_hook.jar \
+          /mnt/app/eso/hmi/lsd/jars/coverart_hook.jar \
+          /mnt/app/eso/hmi/lib/libcarplay_hook.so
+
+# 4. back up the one config you are about to edit
+cp /mnt/system/etc/eso/production/smartphone_integrator.json \
+   /mnt/system/etc/eso/production/smartphone_integrator.json.orig
+```
+
+Then edit the config — `vi` is on the unit:
+
+```sh
+vi /mnt/system/etc/eso/production/smartphone_integrator.json
+```
+
+Search for `IPL_CONFIG_DIR_DIO_MANAGER` (`/IPL_CONFIG_DIR_DIO_MANAGER` then Enter). It
+appears exactly once, on the `carplay` child's `envs` line. Add one entry at the end of
+that array, so the line ends like this:
+
+```
+… "IPL_CONFIG_DIR_DIO_MANAGER=/etc/eso/production", "LD_PRELOAD=/mnt/app/eso/hmi/lib/libcarplay_hook.so"],
+```
+
+Save and quit (`:wq`), then `sync`, wait a few seconds, and reboot.
+
+**Only want the touchpad D-pad?** Step 1's first line plus its `chmod` is the whole
+install — no hook, no config edit.
 
 ## What the installer changes
 
