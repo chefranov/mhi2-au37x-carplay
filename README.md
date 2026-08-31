@@ -95,12 +95,31 @@ You have a CRLF copy if the unit answers like this:
 install.sh[21]: set:
 ```
 
-The one-line repair, if you would rather not re-download — it uses only the shell, since
-the unit has no `sed`, `awk` or `tr`:
+Repairing it **on the unit** is harder than it sounds, because the unit is missing most of
+the tools you would reach for. This is the complete inventory:
+
+```
+/bin      cat chgrp chkqnx6fs chmod chown cp dd df dinit echo fdisk flashctl getconf
+          head hogs if_up ksh link ln login ls mkdir mkqnx6fs mount mv on pidin rm
+          setconf sh slay sleep sloginfo swaitfor sync sysctl tail touch umount uname
+          usb use vi waitfor waitforpoll
+/usr/bin  cut fsmounter grep sort tee
+```
+
+No `sed`, no `awk`, no `tr`, no `printf`. What does work is `vi`:
 
 ```sh
-CR=$(printf '\r'); while IFS= read -r l; do printf '%s\n' "${l%$CR}"; done < install.sh > i.sh && sh i.sh
+vi install.sh
 ```
+
+Type `:%s/` then **Ctrl-V Ctrl-M** (this inserts a literal carriage return, shown as `^M`)
+then `//g` and Enter, so the command line reads `:%s/^M//g`. Then `:wq`. Repeat for
+`uninstall.sh`. If vi reports *No match*, the file was already fine and the problem is
+elsewhere.
+
+Honestly though: fixing the line endings on your own machine before copying is less work
+than any of this, and the [manual install](#manual-install--no-scripts) below needs no
+scripts at all.
 
 After any download, check the payload arrived intact — these are exact sizes:
 
