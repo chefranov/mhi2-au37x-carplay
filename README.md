@@ -124,7 +124,7 @@ scripts at all.
 After any download, check the payload arrived intact — these are exact sizes:
 
 ```
-bin/libcarplay_hook.so   120683
+bin/libcarplay_hook.so   121932
 bin/coverart_hook.jar     24932
 bin/dpad_hook.jar         11108
 ```
@@ -277,6 +277,16 @@ A healthy cover-art run looks like this:
 
 That last line is the cluster asking for the picture — if it never appears, check the
 module 17 adaptation. The installer's own log is at `/tmp/carplay_install.log`.
+
+## Upgrading
+
+Just run `install.sh` again — there is no need to uninstall first. It overwrites the
+files, keeps the `.orig` backup it already made, and leaves the config alone once our
+`LD_PRELOAD` entry is there. The hook is put in place with `rename`, so an upgrade does
+not disturb a `dio_manager` that happens to be running; the new one takes effect at the
+next start.
+
+Reboot afterwards, as with a first install.
 
 ## Uninstall
 

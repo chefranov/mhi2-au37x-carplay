@@ -93,7 +93,15 @@ say "--- copying files ---"
 
 cp "$BIN_DIR/dpad_hook.jar" "$JARS_DIR/dpad_hook.jar" || die "copy dpad_hook.jar failed"
 cp "$BIN_DIR/coverart_hook.jar" "$JARS_DIR/coverart_hook.jar" || die "copy coverart_hook.jar failed"
-cp "$BIN_DIR/libcarplay_hook.so" "$SO_DEST" || die "copy libcarplay_hook.so failed"
+
+# The hook goes in via rename, not a plain cp over the top. On an upgrade
+# dio_manager may be running right now with the old .so mapped, and writing
+# through that file would be modifying a live process image. rename() swaps
+# the directory entry instead: the running process keeps the inode it mapped
+# and picks up the new one when it is next started.
+cp "$BIN_DIR/libcarplay_hook.so" "$SO_DEST.new" || die "copy libcarplay_hook.so failed"
+chmod 755 "$SO_DEST.new"
+mv "$SO_DEST.new" "$SO_DEST" || die "could not put libcarplay_hook.so in place"
 
 # Set the modes explicitly. cp gives whatever the umask and the source
 # filesystem happen to produce - and on the M.I.B. path the source is a FAT32
