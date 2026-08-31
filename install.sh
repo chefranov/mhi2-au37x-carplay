@@ -95,7 +95,14 @@ say "--- copying files ---"
 cp "$BIN_DIR/dpad_hook.jar" "$JARS_DIR/dpad_hook.jar" || die "copy dpad_hook.jar failed"
 cp "$BIN_DIR/coverart_hook.jar" "$JARS_DIR/coverart_hook.jar" || die "copy coverart_hook.jar failed"
 cp "$BIN_DIR/libcarplay_hook.so" "$SO_DEST" || die "copy libcarplay_hook.so failed"
-chmod 755 "$SO_DEST"
+
+# Set the modes explicitly. cp gives whatever the umask and the source
+# filesystem happen to produce - and on the M.I.B. path the source is a FAT32
+# card, which carries no Unix modes at all. Every stock file in the jars
+# directory is world-readable (-rwxrwxrwx root:root), so an unreadable jar
+# would simply be skipped by lsd with no error anywhere.
+chmod 755 "$JARS_DIR/dpad_hook.jar" "$JARS_DIR/coverart_hook.jar" "$SO_DEST"
+
 say "ok: $JARS_DIR/dpad_hook.jar"
 say "ok: $JARS_DIR/coverart_hook.jar"
 say "ok: $SO_DEST"
@@ -136,12 +143,19 @@ else
         die "patched config has no LD_PRELOAD - config not touched"
     }
 
-    cp "$NEW" "$CFG" || die "could not write $CFG (backup is at $CFG.orig)"
+    # Write through the existing file rather than replacing it, so the config
+    # keeps its own mode and owner whatever they are. If this ever fails
+    # half-way the stock file is still at $CFG.orig.
+    cat "$NEW" > "$CFG" || die "could not write $CFG (backup is at $CFG.orig)"
     rm -f "$NEW"
     say "ok: LD_PRELOAD=$SO_DEST added to the carplay child"
 fi
 
 # ---------------------------------------------------------------- done
+say ""
+say "--- installed files ---"
+ls -l "$JARS_DIR/dpad_hook.jar" "$JARS_DIR/coverart_hook.jar" "$SO_DEST" 2>&1 | while IFS= read -r l; do say "$l"; done
+
 say ""
 say "--- flushing writes ---"
 sync

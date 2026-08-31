@@ -30,7 +30,9 @@ mount -uw /mnt/system 2>/dev/null
 say ""
 say "--- smartphone_integrator.json ---"
 if [ -f "$CFG.orig" ]; then
-    cp -p "$CFG.orig" "$CFG" && say "restored from $CFG.orig" \
+    # cat, not cp: writes through the existing file so its mode and owner
+    # stay exactly as the unit had them.
+    cat "$CFG.orig" > "$CFG" && say "restored from $CFG.orig" \
         || say "!! could not restore $CFG - do it by hand"
 elif grep LD_PRELOAD "$CFG" > /dev/null 2>&1; then
     # No backup (installed by hand?). Strip our entry line-based instead.
@@ -51,7 +53,7 @@ elif grep LD_PRELOAD "$CFG" > /dev/null 2>&1; then
         rm -f "$NEW"
         say "!! could not strip LD_PRELOAD automatically - edit $CFG by hand"
     else
-        cp "$NEW" "$CFG" && say "LD_PRELOAD removed"
+        cat "$NEW" > "$CFG" && say "LD_PRELOAD removed"
         rm -f "$NEW"
     fi
 else

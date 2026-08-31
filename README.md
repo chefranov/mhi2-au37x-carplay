@@ -136,7 +136,15 @@ the custom script again.
 
 Nothing stock is overwritten, so only that one config needs a backup. The edit is
 line-based on purpose: the file is JSON with `#` metadata and `##` comment lines that any
-JSON rewriter would silently drop.
+JSON rewriter would silently drop, and it is written *through* the existing file rather
+than replacing it, so the config keeps its own mode and owner.
+
+**Permissions.** The installer `chmod 755`s everything it copies. This matters on the SD
+card path: FAT32 carries no Unix modes, so a jar can land unreadable, and `lsd` skips a
+jar it cannot read without logging anything — you would see no patch and no error. Stock
+files in that directory are `-rwxrwxrwx root:root`. The installer prints an `ls -l` of the
+three files at the end so you can check. Nothing on the card needs the executable bit:
+`custom.sh` is invoked as `sh custom.sh`, and it calls the other scripts the same way.
 
 The jars need no loader change — `lsd.sh` already scans
 `/mnt/app/eso/hmi/lsd/jars/` and puts what it finds on the bootclasspath *ahead* of
