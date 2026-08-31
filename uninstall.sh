@@ -34,7 +34,7 @@ if [ -f "$CFG.orig" ]; then
     # stay exactly as the unit had them.
     cat "$CFG.orig" > "$CFG" && say "restored from $CFG.orig" \
         || say "!! could not restore $CFG - do it by hand"
-elif grep LD_PRELOAD "$CFG" > /dev/null 2>&1; then
+elif grep "libcarplay_hook.so" "$CFG" > /dev/null 2>&1; then
     # No backup (installed by hand?). Strip our entry line-based instead.
     NEW=$CFG.new
     : > "$NEW"
@@ -42,14 +42,15 @@ elif grep LD_PRELOAD "$CFG" > /dev/null 2>&1; then
         case "$line" in
             *LD_PRELOAD*libcarplay_hook.so*)
                 head=${line%%", \"LD_PRELOAD"*}
-                printf '%s],\n' "$head" >> "$NEW"
+                echo "$head]," >> "$NEW"
                 ;;
             *)
-                printf '%s\n' "$line" >> "$NEW"
+                echo "$line" >> "$NEW"
                 ;;
         esac
     done < "$CFG"
-    if grep LD_PRELOAD "$NEW" > /dev/null 2>&1; then
+    # Only our entry, never the stock LD_PRELOAD on the other child.
+    if grep "libcarplay_hook.so" "$NEW" > /dev/null 2>&1; then
         rm -f "$NEW"
         say "!! could not strip LD_PRELOAD automatically - edit $CFG by hand"
     else

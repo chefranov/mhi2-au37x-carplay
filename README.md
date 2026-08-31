@@ -320,6 +320,21 @@ not inside it.
 **`Read-only filesystem`.** `mount -uw /mnt/app` and `mount -uw /mnt/system` — the
 installer does this itself, but a manual `cp` beforehand needs it too.
 
+**The installer said `LD_PRELOAD already present` on a unit you never patched.** That was
+a bug, fixed on 2026-08-31. Stock already carries an unrelated
+`LD_PRELOAD=/eso/lib/libsystemtime_hack.so` on a different child, and the installer's
+idempotency check looked for `LD_PRELOAD` anywhere in the file — so it always decided the
+work was done and never added ours. The jars still installed (the D-pad patch was
+unaffected), but the hook was never preloaded and cover art could not work. Re-run the
+current `install.sh`; it now looks for `libcarplay_hook.so` specifically. To check by
+hand:
+
+```sh
+grep libcarplay_hook.so /mnt/system/etc/eso/production/smartphone_integrator.json
+```
+
+One match means you are set.
+
 ## Recovery
 
 If the HMI does not come up after a reboot, **telnet on port 23 still works** and does not

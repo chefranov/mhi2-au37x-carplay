@@ -42,7 +42,6 @@ die() {
 
 : > "$LOG" 2>/dev/null
 say "=== MHI2 AU37x CarPlay patches - install ==="
-say "date: $(date 2>/dev/null)"
 say "payload: $BIN_DIR"
 
 # ---------------------------------------------------------------- payload
@@ -115,21 +114,38 @@ say "ok: $SO_DEST"
 say ""
 say "--- smartphone_integrator.json ---"
 
-if grep LD_PRELOAD "$CFG" > /dev/null 2>&1; then
-    say "LD_PRELOAD already present - leaving the config alone"
+# NOTE: do NOT test for LD_PRELOAD across the whole file. Stock already has one,
+# on a different child ("LD_PRELOAD=/eso/lib/libsystemtime_hack.so"), so a
+# file-wide test always says "already patched" and the hook silently never
+# gets preloaded. The only question that matters is whether OUR entry is on
+# the carplay child's env line.
+if grep "libcarplay_hook.so" "$CFG" > /dev/null 2>&1; then
+    say "our LD_PRELOAD is already on the carplay child - leaving the config alone"
 else
     NEW=$CFG.new
     : > "$NEW" || die "cannot write $NEW"
     HITS=0
+    CONFLICT=0
     while IFS= read -r line || [ -n "$line" ]; do
         case "$line" in
             *IPL_CONFIG_DIR_DIO_MANAGER*)
-                head=${line%%"]"*}
-                printf '%s, "LD_PRELOAD=%s"],\n' "$head" "$SO_DEST" >> "$NEW"
                 HITS=$((HITS + 1))
+                case "$line" in
+                    *LD_PRELOAD*)
+                        # Someone else already preloads into dio_manager. Two
+                        # LD_PRELOAD entries in one array is not something to
+                        # guess at - stop and let a human look.
+                        CONFLICT=1
+                        echo "$line" >> "$NEW"
+                        ;;
+                    *)
+                        head=${line%%"]"*}
+                        echo "$head, \"LD_PRELOAD=$SO_DEST\"]," >> "$NEW"
+                        ;;
+                esac
                 ;;
             *)
-                printf '%s\n' "$line" >> "$NEW"
+                echo "$line" >> "$NEW"
                 ;;
         esac
     done < "$CFG"
@@ -138,9 +154,13 @@ else
         rm -f "$NEW"
         die "expected exactly 1 carplay env line, found $HITS - config not touched"
     fi
-    grep LD_PRELOAD "$NEW" > /dev/null 2>&1 || {
+    if [ "$CONFLICT" = "1" ]; then
         rm -f "$NEW"
-        die "patched config has no LD_PRELOAD - config not touched"
+        die "the carplay child already has an LD_PRELOAD of its own - config not touched, add ours by hand"
+    fi
+    grep "libcarplay_hook.so" "$NEW" > /dev/null 2>&1 || {
+        rm -f "$NEW"
+        die "patched config does not contain the hook - config not touched"
     }
 
     # Write through the existing file rather than replacing it, so the config
