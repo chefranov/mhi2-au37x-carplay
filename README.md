@@ -76,7 +76,7 @@ uninstall is deleting the file.
 |---|---|
 | `bin/coverart_hook.jar` | HMI patch: pushes the artwork to the cluster and answers its picture requests |
 | `bin/dpad_hook.jar` | HMI patch: touchpad drag → CarPlay D-pad |
-| `bin/libcarplay_hook.so` | Native hook (ARM/QNX), `LD_PRELOAD`ed into `dio_manager`: pulls the artwork out of iAP2, decodes it, writes a 256×256 PNG |
+| `bin/libcarplay_hook.so` | Native hook (ARM/QNX), `LD_PRELOAD`ed into `dio_manager`: pulls the artwork out of iAP2, decodes it, writes a 170×170 PNG |
 | `install.sh` | Runs **on the unit**; does the whole install, idempotent |
 | `uninstall.sh` | Runs on the unit; puts everything back |
 | `custom.sh` | M.I.B. entry point — finds the payload on the card and calls the above |
@@ -125,7 +125,7 @@ After any download, check the payload arrived intact — these are exact sizes:
 
 ```
 bin/libcarplay_hook.so   121932
-bin/coverart_hook.jar     24932
+bin/coverart_hook.jar     26176
 bin/dpad_hook.jar         11108
 ```
 
@@ -268,7 +268,7 @@ A healthy cover-art run looks like this:
 
 ```
 [INF] new artwork id=130 size=53964
-[INF] artwork decoded 600x600 (3 ch) -> 256x256
+[INF] artwork decoded 600x600 (3 ch) -> 170x170
 [INF] published coverart: crc=b5012bdf size=53964
 [CarplayBus] hook connected from /127.0.0.1
 [CoverArt] New cover art: crc=b5012bdf
@@ -344,6 +344,25 @@ grep libcarplay_hook.so /mnt/system/etc/eso/production/smartphone_integrator.jso
 ```
 
 One match means you are set.
+
+**Cover art comes up torn — solid green or magenta bands across it — when skipping
+tracks quickly.** The picture travels to the cluster over BAP, which is slow; a burst of
+skips used to start one transfer per skip, so a new one began before the previous had
+finished and the cluster painted a buffer written by two different pictures. This is not
+a compression artifact: the file is a PNG and PNG is lossless, so it either decodes
+correctly or not at all.
+
+Two changes address it, both in the 2026-09-01 build:
+
+* The artwork is now scaled to **170×170** instead of 256×256 — 0.44× the bytes on the
+  bus, so the transfer window is less than half as wide. The picture server rescales to
+  the cluster's own resolution anyway, so nothing looks smaller.
+* While skips are still arriving, only the track text is sent; the picture is held back
+  and pushed once the track has stayed put for about a second and a half.
+
+If you still see bands after updating, first confirm you are actually on the new build —
+`ls -l /eso/lib/libcarplay_hook.so` should read **121932** — and then send the tail of
+`/mnt/app/carplay_hook.log` covering the skips.
 
 ## Recovery
 
