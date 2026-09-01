@@ -16,7 +16,8 @@
 #   5. Tells you to reboot.
 #
 # Everything is idempotent: running it twice changes nothing the second time.
-# POSIX sh only - no bashisms, no sed, no awk.
+# POSIX sh only - no bashisms, and none of sed, awk or dirname: the unit
+# has no such utilities.
 
 set -u
 
@@ -26,7 +27,15 @@ SO_DEST=$LIB_DIR/libcarplay_hook.so
 CFG=/mnt/system/etc/eso/production/smartphone_integrator.json
 LOG=/tmp/carplay_install.log
 
-SRC_DIR=${SRC_DIR:-$(dirname "$0")}
+# No `dirname` either - see the note in custom.sh.  ${0%/*} strips the last
+# /component, but leaves $0 untouched when it has no slash at all, so the
+# no-slash case has to pick "." explicitly.
+if [ -z "${SRC_DIR:-}" ]; then
+    case $0 in
+        */*) SRC_DIR=${0%/*} ;;
+        *)   SRC_DIR=. ;;
+    esac
+fi
 BIN_DIR=$SRC_DIR/bin
 
 say() {

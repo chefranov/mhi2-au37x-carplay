@@ -17,6 +17,13 @@ echo "=== MHI2 AU37x CarPlay patches - M.I.B. launcher ==="
 
 # The card can be mounted under different names depending on the reader, so
 # look for our payload rather than assuming a path.
+# `dirname` is missing too, so $0's directory is derived with ${0%/*} - which
+# leaves $0 alone when there is no slash in it, hence the explicit "." case.
+case $0 in
+    */*) SELF_DIR=${0%/*} ;;
+    *)   SELF_DIR=. ;;
+esac
+
 # Globs, not `find`: this unit has no find at all (/bin holds 40 utilities and
 # that is not one of them), so a find-based search would fail silently and the
 # script would report "payload not found" for the wrong reason. The shell
@@ -24,7 +31,7 @@ echo "=== MHI2 AU37x CarPlay patches - M.I.B. launcher ==="
 # -f tests below reject it.
 PAYLOAD=""
 for d in \
-    "$(dirname "$0")/carplay" \
+    "$SELF_DIR/carplay" \
     /fs/*/mod/carplay \
     /mnt/*/mod/carplay \
     /net/*/fs/*/mod/carplay
@@ -39,7 +46,7 @@ if [ -z "$PAYLOAD" ]; then
     echo "!! payload not found."
     echo "!! Expected /mod/carplay/install.sh and /mod/carplay/bin/ on the card,"
     echo "!! with custom.sh itself at /mod/custom.sh."
-    echo "!! Looked under: $(dirname "$0")/carplay, /fs/*/mod, /mnt/*/mod, /net/*/fs/*/mod"
+    echo "!! Looked under: $SELF_DIR/carplay, /fs/*/mod, /mnt/*/mod, /net/*/fs/*/mod"
     exit 1
 fi
 
