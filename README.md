@@ -125,7 +125,7 @@ After any download, check the payload arrived intact — these are exact sizes:
 
 ```
 bin/libcarplay_hook.so   124703
-bin/coverart_hook.jar     26683
+bin/coverart_hook.jar     27848
 bin/dpad_hook.jar         11108
 ```
 
@@ -363,6 +363,20 @@ Two changes address it, both in the 2026-09-01 build:
 If you still see bands after updating, first confirm you are actually on the new build —
 `ls -l /eso/lib/libcarplay_hook.so` should read **124703** — and then send the tail of
 `/mnt/app/carplay_hook.log` covering the skips.
+
+**You plug the phone in while music is already playing and there is no cover until you
+skip a track.** Fixed in the 2026-09-03 build. The cluster push is dropped while
+CarPlay is not the active audio source, and that can last as long as the driver takes to
+select it. The retry ran once a second and gave up after ten attempts, so a cover that
+only needed waiting for was abandoned, and only the next track change brought it back.
+The push is now held — silently, without hammering the bus — until audio focus arrives,
+and sent the moment it does. In the log:
+
+```
+[TMEventListener] cover held until audio focus arrives (cover push not delivered)
+[DIAG] audio focus -> true
+[TMEventListener] audio focus gained - sending the cover that was held back
+```
 
 **The first cover of a CarPlay session is missing, and appears once you change track.**
 Fixed in the 2026-09-03 build. The Java half dedupes artwork by checksum so the same
