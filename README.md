@@ -124,8 +124,8 @@ scripts at all.
 After any download, check the payload arrived intact — these are exact sizes:
 
 ```
-bin/libcarplay_hook.so   121932
-bin/coverart_hook.jar     26176
+bin/libcarplay_hook.so   124703
+bin/coverart_hook.jar     26683
 bin/dpad_hook.jar         11108
 ```
 
@@ -361,8 +361,23 @@ Two changes address it, both in the 2026-09-01 build:
   and pushed once the track has stayed put for about a second and a half.
 
 If you still see bands after updating, first confirm you are actually on the new build —
-`ls -l /eso/lib/libcarplay_hook.so` should read **121932** — and then send the tail of
+`ls -l /eso/lib/libcarplay_hook.so` should read **124703** — and then send the tail of
 `/mnt/app/carplay_hook.log` covering the skips.
+
+**The first cover of a CarPlay session is missing, and appears once you change track.**
+Fixed in the 2026-09-03 build. The Java half dedupes artwork by checksum so the same
+picture is not pushed to the cluster twice, and it lives inside the HMI, which is not
+restarted between sessions — so it had no idea a new session had started. Plug the phone
+back in on the same track, the identical artwork arrives, and it was discarded as a
+repeat. The hook now announces a new session and the Java half clears what it remembered.
+
+In the log:
+
+```
+[INF] CarPlay session started - HELLO sent
+```
+
+and on the Java side `State reset (prevCrc=...)`.
 
 ## Recovery
 
