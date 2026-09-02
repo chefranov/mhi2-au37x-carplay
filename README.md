@@ -413,5 +413,11 @@ the HMI class-patch pattern and the cover-art pipeline come from there. That pro
 targets the Cinemo/Qualcomm MHI2Q stack; the native side here is a rewrite for the HARMAN
 iAP2 stack these AU37x units use.
 
+Thanks to [Mich795](https://github.com/Mich795), who took this build apart and sent back
+a version of their own. Several fixes in the 2026-09-03 release came from reading it: the
+session boundary that stops the first cover of a session being discarded as a duplicate,
+dropping a fetch when the phone has already moved to another track, retrying a fetch whose
+bytes have not arrived yet, and reusing artwork already built.
+
 Route guidance (CarPlay maneuvers on the cluster) is being worked on and is not part of
 this repository yet.
