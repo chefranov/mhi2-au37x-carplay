@@ -13,7 +13,7 @@ M.I.B. SD card.
 > **Use at your own risk.** These patches copy files onto the head unit's flash and edit
 > one system config. Everything is reversible and the installer backs up the one file it
 > changes, but a head unit is not a toy. Read
-> [Recovery](docs/Troubleshooting.md#recovery) *before* you start, and make sure you can
+> [Recovery](https://github.com/chefranov/mhi2-au37x-carplay/wiki/Troubleshooting#recovery) *before* you start, and make sure you can
 > get a shell on the unit without the screen.
 
 <p align="center"><img src="docs/coverart.jpg" width="80%" /></p>
@@ -27,7 +27,7 @@ A3 8V Sportback e-tron (2017) with the Virtual Cockpit and the HARMAN iAP2 stack
 
 Other `MHI2_ER_AU37x_*` builds are expected to work but are not verified. Two things
 decide it, and one of them can keep the HMI from starting — **[read Compatibility before
-installing](docs/Compatibility.md)**.
+installing](https://github.com/chefranov/mhi2-au37x-carplay/wiki/Compatibility)**.
 
 Two requirements worth knowing up front:
 
@@ -60,7 +60,7 @@ bin/dpad_hook.jar         11108
 **On Windows, download this repository fresh** (clone again, or Code → Download ZIP).
 Earlier copies were checked out with CRLF line endings and every script in them fails on
 the unit. `.gitattributes` now pins LF, but only for new downloads — the
-[repair recipe](docs/Installation.md#before-you-copy-anything-windows-line-endings) is
+[repair recipe](https://github.com/chefranov/mhi2-au37x-carplay/wiki/Installation#before-you-copy-anything-windows-line-endings) is
 more work than re-downloading.
 
 ## Install
@@ -80,7 +80,7 @@ repository at `/mod/carplay/`, then run `Advanced Settings → Run Custom Script
 reboot.
 
 Full walkthrough of both, plus a scripts-free manual install and the list of everything
-that gets changed: **[Installation](docs/Installation.md)**.
+that gets changed: **[Installation](https://github.com/chefranov/mhi2-au37x-carplay/wiki/Installation)**.
 
 Upgrading is just running `install.sh` again — no need to uninstall first.
 
@@ -97,7 +97,7 @@ unit. A healthy run ends with the cluster asking for the picture:
 
 If that last line never appears, check the module 17 adaptation. What the other lines
 mean, and what to do when they are missing:
-**[Verifying and troubleshooting](docs/Troubleshooting.md)**.
+**[Verifying and troubleshooting](https://github.com/chefranov/mhi2-au37x-carplay/wiki/Troubleshooting)**.
 
 ## Uninstall
 
