@@ -52,8 +52,8 @@ Two requirements worth knowing up front:
 Exact sizes, worth checking after any download:
 
 ```
-bin/libcarplay_hook.so   124703
-bin/coverart_hook.jar     27848
+bin/libcarplay_hook.so   124685
+bin/coverart_hook.jar     27993
 bin/dpad_hook.jar         11108
 ```
 
@@ -86,8 +86,17 @@ Upgrading is just running `install.sh` again — no need to uninstall first.
 
 ## Verify
 
-Plug in an iPhone, play something with artwork, then read `/tmp/carplay_hook.log` on the
-unit. A healthy run ends with the cluster asking for the picture:
+The native hook is quiet unless you ask it to talk — `/tmp` on this unit is RAM, and a
+log that grows for the length of a session eats it. Turn it on, then plug in an iPhone
+and play something with artwork:
+
+```sh
+touch /mnt/app/carplay_verbose
+slay -f dio_manager          # picked up on the next start
+cat /tmp/carplay_hook.log
+```
+
+A healthy run ends with the cluster asking for the picture:
 
 ```
 [INF] artwork decoded 600x600 (3 ch) -> 170x170
@@ -95,7 +104,8 @@ unit. A healthy run ends with the cluster asking for the picture:
 [CoverArtProvider] requestPicture entryID=0 sourceType=0 known=true
 ```
 
-If that last line never appears, check the module 17 adaptation. What the other lines
+If that last line never appears, check the module 17 adaptation. Delete the marker file
+when you are done; warnings and errors are logged either way. What the other lines
 mean, and what to do when they are missing:
 **[Verifying and troubleshooting](https://github.com/chefranov/mhi2-au37x-carplay/wiki/Troubleshooting)**.
 
