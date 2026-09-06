@@ -11,9 +11,16 @@
 set -u
 
 JARS_DIR=/mnt/app/eso/hmi/lsd/jars
-SO_DEST=/mnt/app/eso/hmi/lib/libcarplay_hook.so
+LIB_DIR=/mnt/app/eso/hmi/lib
+SO_DEST=$LIB_DIR/libcarplay_hook.so
 CFG=/mnt/system/etc/eso/production/smartphone_integrator.json
 LOG=/tmp/carplay_uninstall.log
+
+# Route guidance (RGI)
+RGD_SO=$LIB_DIR/librgd_hook.so
+RGD_JAR=$JARS_DIR/rgd_hook.jar
+FRAMES_DIR=$LIB_DIR/rgd_frames
+SBIN=/mnt/app/armle/usr/sbin
 
 say() {
     echo "$@"
@@ -62,6 +69,47 @@ else
 fi
 
 # ---------------------------------------------------------------- files
+# ---------------------------------------------------------------- route guidance
+# The shim goes first, for the same reason the config did: if anything below
+# fails, the unit still starts a stock mm-ipod with nothing preloaded.
+say ""
+say "--- route guidance (RGI) ---"
+if [ -f "$SBIN/mm-ipod.orig" ]; then
+    cat "$SBIN/mm-ipod.orig" > "$SBIN/mm-ipod" && chmod 755 "$SBIN/mm-ipod" \
+        && say "restored $SBIN/mm-ipod from .orig" \
+        || say "!! could not restore $SBIN/mm-ipod - do it by hand"
+elif [ -f "$SBIN/rgd_real/mm-ipod" ]; then
+    cat "$SBIN/rgd_real/mm-ipod" > "$SBIN/mm-ipod" && chmod 755 "$SBIN/mm-ipod" \
+        && say "restored $SBIN/mm-ipod from rgd_real/" \
+        || say "!! could not restore $SBIN/mm-ipod - do it by hand"
+else
+    say "no shim installed - nothing to undo"
+fi
+
+for f in "$RGD_JAR" "$RGD_SO"; do
+    if [ -f "$f" ]; then
+        rm -f "$f" && say "removed: $f" || say "!! could not remove $f"
+    fi
+done
+
+if [ -d "$FRAMES_DIR" ]; then
+    # No `rm -rf` on a directory tree here: the unit's rm has it, but the frame
+    # set is 3600 files and one wrong variable would take the lot with it.
+    # Explicit paths only.
+    for stage in small large; do
+        [ -d "$FRAMES_DIR/$stage" ] || continue
+        rm -f "$FRAMES_DIR/$stage"/*.png "$FRAMES_DIR/$stage"/frames.idx 2>/dev/null
+        rmdir "$FRAMES_DIR/$stage" 2>/dev/null
+    done
+    rmdir "$FRAMES_DIR" 2>/dev/null
+    say "removed: $FRAMES_DIR"
+fi
+
+# Markers the feature reads.  rgd_disable is the user's own off switch; taking
+# it away with the patch is right - there is nothing left for it to disable.
+rm -f /mnt/app/rgd_disable /mnt/app/rgd_cluster_ctx /mnt/app/rgd_rgtype \
+      /mnt/app/rgd_hook.log 2>/dev/null
+
 say ""
 say "--- removing files ---"
 for f in "$JARS_DIR/coverart_hook.jar" "$JARS_DIR/dpad_hook.jar" "$SO_DEST"; do

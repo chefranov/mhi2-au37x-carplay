@@ -10,6 +10,10 @@
 # It finds the payload on the card and runs install.sh. To uninstall instead,
 # create an empty file named UNINSTALL next to install.sh on the card
 # (/mod/carplay/UNINSTALL) and run the custom script again.
+#
+# To install everything except route guidance, put an empty file named NO_RGI
+# on the card beside install.sh - there is no way to pass an environment
+# variable through the M.I.B. menu.
 
 set -u
 
@@ -55,6 +59,9 @@ echo "payload: $PAYLOAD"
 if [ -f "$PAYLOAD/UNINSTALL" ]; then
     echo "UNINSTALL marker present - removing the patches"
     SRC_DIR="$PAYLOAD" sh "$PAYLOAD/uninstall.sh"
+elif [ -f "$PAYLOAD/NO_RGI" ]; then
+    echo "NO_RGI marker present - installing without route guidance"
+    SRC_DIR="$PAYLOAD" RGI=0 sh "$PAYLOAD/install.sh"
 else
     SRC_DIR="$PAYLOAD" sh "$PAYLOAD/install.sh"
 fi

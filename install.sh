@@ -9,11 +9,13 @@
 # What it does:
 #   1. Remounts /mnt/app and /mnt/system read-write.
 #   2. Backs up every file it is going to change, once, as <file>.orig.
-#   3. Copies the two jars into the HMI's jar directory and the native hook
+#   3. Copies the jars into the HMI's jar directory and the native hooks
 #      into /mnt/app/eso/hmi/lib.
-#   4. Adds LD_PRELOAD for the hook to the carplay child in
+#   4. Adds LD_PRELOAD for the cover-art hook to the carplay child in
 #      smartphone_integrator.json - line-based, no sed (the unit has none).
-#   5. Tells you to reboot.
+#   5. Installs route guidance (RGI): the maneuver frames, the RGI jar, and a
+#      shim in front of mm-ipod that preloads its hook.  Skip it with RGI=0.
+#   6. Tells you to reboot.
 #
 # Everything is idempotent: running it twice changes nothing the second time.
 # POSIX sh only - no bashisms, and none of sed, awk or dirname: the unit
@@ -26,6 +28,16 @@ LIB_DIR=/mnt/app/eso/hmi/lib
 SO_DEST=$LIB_DIR/libcarplay_hook.so
 CFG=/mnt/system/etc/eso/production/smartphone_integrator.json
 LOG=/tmp/carplay_install.log
+
+# Route guidance (RGI).  RGI=0 leaves the whole feature out of the install;
+# everything else here is unaffected either way.
+RGI=${RGI:-1}
+RGD_SO=$LIB_DIR/librgd_hook.so
+RGD_JAR=$JARS_DIR/rgd_hook.jar
+FRAMES_DIR=$LIB_DIR/rgd_frames
+SBIN=/mnt/app/armle/usr/sbin
+# Frames need about 35 MB; refuse rather than half-fill the partition.
+FRAMES_KB_NEEDED=40000
 
 # No `dirname` either - see the note in custom.sh.  ${0%/*} strips the last
 # /component, but leaves $0 untouched when it has no slash at all, so the
@@ -57,6 +69,17 @@ say "payload: $BIN_DIR"
 for f in coverart_hook.jar dpad_hook.jar libcarplay_hook.so; do
     [ -f "$BIN_DIR/$f" ] || die "missing payload file: $BIN_DIR/$f"
 done
+
+if [ "$RGI" != "0" ]; then
+    for f in rgd_hook.jar librgd_hook.so; do
+        [ -f "$BIN_DIR/$f" ] || die "missing payload file: $BIN_DIR/$f (or set RGI=0)"
+    done
+    [ -f "$BIN_DIR/rgd_frames/small/frames.idx" ] || \
+        die "missing maneuver frames: $BIN_DIR/rgd_frames (or set RGI=0)"
+    say "route guidance: ON (RGI=0 skips it)"
+else
+    say "route guidance: SKIPPED (RGI=0)"
+fi
 
 # ---------------------------------------------------------------- unit check
 [ -d /mnt/app/eso ] || die "/mnt/app/eso not found - this is not an MHI2 unit"
@@ -188,10 +211,80 @@ else
     say "ok: LD_PRELOAD=$SO_DEST added to the carplay child"
 fi
 
+# ---------------------------------------------------------------- route guidance
+if [ "$RGI" != "0" ]; then
+    say ""
+    say "--- route guidance (RGI) ---"
+
+    # Frames are ~3600 small PNGs.  The unit has no tar, gzip or unzip, so they
+    # travel as plain files and are copied with cp; check there is room first.
+    FREE=`df -k "$LIB_DIR" 2>/dev/null | tail -1`
+    set -- $FREE
+    # df -k prints: filesystem 1K-blocks used available capacity mounted
+    AVAIL=$4
+    case "$AVAIL" in
+        ''|*[!0-9]*) say "note: could not read free space, continuing" ;;
+        *) [ "$AVAIL" -lt "$FRAMES_KB_NEEDED" ] && \
+               die "only ${AVAIL}K free on /mnt/app, the frames need ${FRAMES_KB_NEEDED}K" ;;
+    esac
+
+    cp "$BIN_DIR/rgd_hook.jar" "$RGD_JAR" || die "copy rgd_hook.jar failed"
+    chmod 755 "$RGD_JAR"
+    say "ok: $RGD_JAR"
+
+    cp "$BIN_DIR/librgd_hook.so" "$RGD_SO.new" || die "copy librgd_hook.so failed"
+    chmod 755 "$RGD_SO.new"
+    mv "$RGD_SO.new" "$RGD_SO" || die "could not put librgd_hook.so in place"
+    say "ok: $RGD_SO"
+
+    for stage in small large; do
+        [ -d "$FRAMES_DIR/$stage" ] || mkdir -p "$FRAMES_DIR/$stage" || \
+            die "could not create $FRAMES_DIR/$stage"
+        say "copying $stage frames (this takes a minute)..."
+        cp "$BIN_DIR/rgd_frames/$stage"/* "$FRAMES_DIR/$stage/" || \
+            die "copying $stage frames failed"
+        chmod 644 "$FRAMES_DIR/$stage"/* 2>/dev/null
+    done
+    say "ok: $FRAMES_DIR"
+
+    # The shim.  mm-ipod is started by usblauncher out of a config on flash,
+    # which we do not touch; instead the binary on /mnt/app is replaced by a
+    # script that preloads the hook and execs the real one.  The real binary
+    # keeps the name mm-ipod under rgd_real/, because the hook gates on
+    # argv[0]'s basename.
+    if [ ! -f "$SBIN/mm-ipod" ]; then
+        die "$SBIN/mm-ipod not found - unexpected firmware layout"
+    fi
+    if [ ! -f "$SBIN/rgd_real/mm-ipod" ]; then
+        mkdir -p "$SBIN/rgd_real" || die "could not create $SBIN/rgd_real"
+        cp -p "$SBIN/mm-ipod" "$SBIN/rgd_real/mm-ipod" || die "could not copy mm-ipod aside"
+        cp -p "$SBIN/mm-ipod" "$SBIN/mm-ipod.orig" || die "could not back up mm-ipod"
+        say "saved the original mm-ipod ($SBIN/mm-ipod.orig)"
+    else
+        say "shim already installed - refreshing it"
+    fi
+
+    cat > "$SBIN/mm-ipod.new" <<'SHIM'
+#!/bin/sh
+# Route-guidance shim.  The real binary is in rgd_real/ under its own name so
+# argv[0] stays "mm-ipod" - the hook gates on that.
+# Off switch: touch /mnt/app/rgd_disable, then replug the phone.
+[ -f /mnt/app/rgd_disable ] || LD_PRELOAD=/mnt/app/eso/hmi/lib/librgd_hook.so
+export LD_PRELOAD
+exec /mnt/app/armle/usr/sbin/rgd_real/mm-ipod "$@"
+SHIM
+    chmod 755 "$SBIN/mm-ipod.new"
+    mv "$SBIN/mm-ipod.new" "$SBIN/mm-ipod" || die "could not install the shim"
+    say "ok: $SBIN/mm-ipod (shim)"
+fi
+
 # ---------------------------------------------------------------- done
 say ""
 say "--- installed files ---"
 ls -l "$JARS_DIR/dpad_hook.jar" "$JARS_DIR/coverart_hook.jar" "$SO_DEST" 2>&1 | while IFS= read -r l; do say "$l"; done
+if [ "$RGI" != "0" ]; then
+    ls -l "$RGD_JAR" "$RGD_SO" "$SBIN/mm-ipod" 2>&1 | while IFS= read -r l; do say "$l"; done
+fi
 
 say ""
 say "--- flushing writes ---"
@@ -206,5 +299,13 @@ say "Wait a few seconds first - the writes above must reach flash."
 say ""
 say "After the reboot, plug in an iPhone and check:"
 say "  cat /tmp/carplay_hook.log"
+if [ "$RGI" != "0" ]; then
+    say ""
+    say "Route guidance is installed and on.  Start a route in Apple Maps or"
+    say "Google Maps on the phone and the maneuver appears in the cluster."
+    say "To turn it off later, without uninstalling anything:"
+    say "  touch /mnt/app/rgd_disable   (then reboot)"
+    say "and to turn it back on, delete that file and reboot."
+fi
 say ""
 say "This log: $LOG"

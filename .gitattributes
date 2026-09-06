@@ -10,3 +10,7 @@
 *.so  binary
 *.jpg binary
 *.png binary
+
+# Payload - never touch these.
+*.gif binary
+*.idx binary
