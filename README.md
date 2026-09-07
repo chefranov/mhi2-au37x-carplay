@@ -51,7 +51,24 @@ Three requirements worth knowing up front:
 - **Route guidance needs no coding either**, but it does need about 35 MB free on
   `/mnt/app` for the maneuver frames, and it replaces the `mm-ipod` binary on that
   partition with a small shim (the original is kept beside it). Skip it at install
-  time with `RGI=0`, or turn it off later with one file — see below.
+  time with `RGI=0`, or turn it off later with one file — see below. **On the sport
+  cluster layout it does not look right yet — leave it out there**, see below.
+
+### The sport cluster layout
+
+The Virtual Cockpit has two layouts, and route guidance is only right on the classic
+one. On the **sport** layout — one rev counter in the middle, the side areas on black —
+the maneuver tile carries a background drawn for the classic layout, so it appears as a
+grey rectangle sitting on black. The arrow and the distance are correct; it simply looks
+wrong.
+
+**If you drive with the sport layout, leave route guidance out**: install with `RGI=0`
+(or the `NO_RGI` file on the SD-card path), and the other two patches are unaffected.
+The cluster then shows its own stock maneuver symbol, as it does without any of this.
+
+A fix is in progress, and it is not a repaint: the aim is to feed the cluster's own
+maneuver presentation instead of drawing a tile over it, which would look factory on
+both layouts. Until that lands, this is the honest state of it.
 
 ### Which navigation apps work
 
