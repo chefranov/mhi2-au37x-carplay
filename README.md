@@ -88,7 +88,7 @@ bin/libcarplay_hook.so   124685
 bin/coverart_hook.jar     27993
 bin/dpad_hook.jar         11108
 bin/librgd_hook.so       188111
-bin/rgd_hook.jar         122939
+bin/rgd_hook.jar         122946
 ```
 
 **On Windows, download this repository fresh** (clone again, or Code → Download ZIP).
