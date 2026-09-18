@@ -101,8 +101,8 @@ change on this side.
 Exact sizes, worth checking after any download:
 
 ```
-bin/libcarplay_hook.so   124685
-bin/coverart_hook.jar     27993
+bin/libcarplay_hook.so   125130
+bin/coverart_hook.jar     28909
 bin/dpad_hook.jar         11108
 bin/librgd_hook.so       188111
 bin/rgd_hook.jar         122946
