@@ -48,27 +48,33 @@ Three requirements worth knowing up front:
 - **The D-pad patch needs no coding**, and is self-contained: copy `bin/dpad_hook.jar`
   into `/mnt/app/eso/hmi/lsd/jars/` and you are done. It is the lowest-risk way to try
   any of this.
-- **Route guidance needs no coding either**, but it does need about 35 MB free on
+- **Route guidance needs no coding either**, but it does need about 90 MB free on
   `/mnt/app` for the maneuver frames, and it replaces the `mm-ipod` binary on that
   partition with a small shim (the original is kept beside it). Skip it at install
-  time with `RGI=0`, or turn it off later with one file — see below. **On the sport
-  cluster layout it does not look right yet — leave it out there**, see below.
+  time with `RGI=0`, or turn it off later with one file — see below. It follows the
+  cluster's layout, classic or sport, by itself.
 
 ### The sport cluster layout
 
-The Virtual Cockpit has two layouts, and route guidance is only right on the classic
-one. On the **sport** layout — one rev counter in the middle, the side areas on black —
-the maneuver tile carries a background drawn for the classic layout, so it appears as a
-grey rectangle sitting on black. The arrow and the distance are correct; it simply looks
-wrong.
+The Virtual Cockpit has two layouts, and route guidance draws for both. On the
+**sport** layout — one rev counter in the middle, the side areas on black — the
+small-stage tile sits on the cluster's own black panel, the picture centred at the
+bottom of it; the wide tile is the same as on the classic layout, because that is what
+the cluster itself does.
 
-**If you drive with the sport layout, leave route guidance out**: install with `RGI=0`
-(or the `NO_RGI` file on the SD-card path), and the other two patches are unaffected.
-The cluster then shows its own stock maneuver symbol, as it does without any of this.
+The layout is detected by itself: switch it in the cluster's menu and the tile follows
+within about five seconds. Nothing to set.
 
-A fix is in progress, and it is not a repaint: the aim is to feed the cluster's own
-maneuver presentation instead of drawing a tile over it, which would look factory on
-both layouts. Until that lands, this is the honest state of it.
+Should you ever need to force it — say, to compare the two — a marker file wins while
+it exists:
+
+```sh
+ssh root@172.16.250.248 'mount -uw /mnt/app; touch /mnt/app/rgd_sport'   # force sport
+ssh root@172.16.250.248 'mount -uw /mnt/app; rm /mnt/app/rgd_sport'      # back to automatic
+```
+
+No reboot needed. At install time the same is `SPORT=1 sh install.sh`, or an empty file
+named `SPORT` next to `install.sh` on the SD card.
 
 ### Which navigation apps work
 
@@ -90,7 +96,7 @@ change on this side.
 |---|---|
 | `bin/rgd_hook.jar` | HMI patch: turns the phone's route guidance into cluster maneuvers and drives the maneuver tile |
 | `bin/librgd_hook.so` | Native hook (ARM/QNX), `LD_PRELOAD`ed into `mm-ipod`: asks iOS for route guidance and forwards it |
-| `bin/rgd_frames/` | The pre-drawn maneuver animations, ~3600 PNGs. The cluster driver has no shader compiler, so the arrows are drawn ahead of time and played back as frames |
+| `bin/rgd_frames/` | The pre-drawn maneuver animations, ~5400 PNGs in three sets (classic small and large stage, sport small stage). The cluster driver has no shader compiler, so the arrows are drawn ahead of time and played back as frames |
 | `bin/coverart_hook.jar` | HMI patch: pushes the artwork to the cluster and answers its picture requests |
 | `bin/dpad_hook.jar` | HMI patch: touchpad drag → CarPlay D-pad |
 | `bin/libcarplay_hook.so` | Native hook (ARM/QNX), `LD_PRELOAD`ed into `dio_manager`: pulls the artwork out of iAP2, decodes it, writes a 170×170 PNG |
@@ -126,12 +132,14 @@ ssh root@172.16.250.248 'sh /mnt/app/root/carplay/install.sh'
 
 Then reboot. Do not stage the files under `/tmp` — it holds no directories on this unit.
 The copy is a few minutes: most of it is the maneuver frames. To install everything
-*except* route guidance, run the installer as `RGI=0 sh /mnt/app/root/carplay/install.sh`.
+*except* route guidance, run the installer as `RGI=0 sh /mnt/app/root/carplay/install.sh`;
+to force the sport cluster layout (not normally needed), as
+`SPORT=1 sh /mnt/app/root/carplay/install.sh`.
 
 From an M.I.B. SD card: put `custom.sh` at `/mod/custom.sh` and the rest of the
 repository at `/mod/carplay/`, then run `Advanced Settings → Run Custom Script` and
 reboot. To leave route guidance out on this path, put an empty file named `NO_RGI`
-next to `install.sh` on the card.
+next to `install.sh` on the card; to force the sport cluster layout, one named `SPORT`.
 
 Full walkthrough of both, plus a scripts-free manual install and the list of everything
 that gets changed: **[Installation](https://github.com/chefranov/mhi2-au37x-carplay/wiki/Installation)**.

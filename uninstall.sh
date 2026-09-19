@@ -96,7 +96,7 @@ if [ -d "$FRAMES_DIR" ]; then
     # No `rm -rf` on a directory tree here: the unit's rm has it, but the frame
     # set is 3600 files and one wrong variable would take the lot with it.
     # Explicit paths only.
-    for stage in small large; do
+    for stage in small large large_sport; do
         [ -d "$FRAMES_DIR/$stage" ] || continue
         rm -f "$FRAMES_DIR/$stage"/*.png "$FRAMES_DIR/$stage"/frames.idx 2>/dev/null
         rmdir "$FRAMES_DIR/$stage" 2>/dev/null
@@ -108,7 +108,7 @@ fi
 # Markers the feature reads.  rgd_disable is the user's own off switch; taking
 # it away with the patch is right - there is nothing left for it to disable.
 rm -f /mnt/app/rgd_disable /mnt/app/rgd_cluster_ctx /mnt/app/rgd_rgtype \
-      /mnt/app/rgd_hook.log 2>/dev/null
+      /mnt/app/rgd_sport /mnt/app/rgd_hook.log 2>/dev/null
 
 say ""
 say "--- removing files ---"

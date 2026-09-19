@@ -36,8 +36,8 @@ RGD_SO=$LIB_DIR/librgd_hook.so
 RGD_JAR=$JARS_DIR/rgd_hook.jar
 FRAMES_DIR=$LIB_DIR/rgd_frames
 SBIN=/mnt/app/armle/usr/sbin
-# Frames need about 35 MB; refuse rather than half-fill the partition.
-FRAMES_KB_NEEDED=40000
+# Frames need about 90 MB; refuse rather than half-fill the partition.
+FRAMES_KB_NEEDED=95000
 
 # No `dirname` either - see the note in custom.sh.  ${0%/*} strips the last
 # /component, but leaves $0 untouched when it has no slash at all, so the
@@ -74,8 +74,10 @@ if [ "$RGI" != "0" ]; then
     for f in rgd_hook.jar librgd_hook.so; do
         [ -f "$BIN_DIR/$f" ] || die "missing payload file: $BIN_DIR/$f (or set RGI=0)"
     done
-    [ -f "$BIN_DIR/rgd_frames/small/frames.idx" ] || \
-        die "missing maneuver frames: $BIN_DIR/rgd_frames (or set RGI=0)"
+    for stage in small large large_sport; do
+        [ -f "$BIN_DIR/rgd_frames/$stage/frames.idx" ] || \
+            die "missing maneuver frames: $BIN_DIR/rgd_frames/$stage (or set RGI=0)"
+    done
     say "route guidance: ON (RGI=0 skips it)"
 else
     say "route guidance: SKIPPED (RGI=0)"
@@ -216,7 +218,7 @@ if [ "$RGI" != "0" ]; then
     say ""
     say "--- route guidance (RGI) ---"
 
-    # Frames are ~3600 small PNGs.  The unit has no tar, gzip or unzip, so they
+    # Frames are ~5400 small PNGs (three sets).  The unit has no tar, gzip or unzip, so they
     # travel as plain files and are copied with cp; check there is room first.
     FREE=`df -k "$LIB_DIR" 2>/dev/null | tail -1`
     set -- $FREE
@@ -237,7 +239,10 @@ if [ "$RGI" != "0" ]; then
     mv "$RGD_SO.new" "$RGD_SO" || die "could not put librgd_hook.so in place"
     say "ok: $RGD_SO"
 
-    for stage in small large; do
+    # small and large draw the classic layout; large_sport is the well on the
+    # sport layout (the wide tile looks the same on both).  Which one the
+    # player uses is decided by the rgd_sport marker, see SPORT below.
+    for stage in small large large_sport; do
         [ -d "$FRAMES_DIR/$stage" ] || mkdir -p "$FRAMES_DIR/$stage" || \
             die "could not create $FRAMES_DIR/$stage"
         say "copying $stage frames (this takes a minute)..."
@@ -246,6 +251,20 @@ if [ "$RGI" != "0" ]; then
         chmod 644 "$FRAMES_DIR/$stage"/* 2>/dev/null
     done
     say "ok: $FRAMES_DIR"
+
+    # The layout is normally read from the head unit itself (the cluster's
+    # menu reaches it as a skin).  The marker forces the sport layout on a unit
+    # where that does not follow; it can be changed any time without a reboot
+    # (picked up within 5 s), and removing it hands control back.
+    if [ "$SPORT" = "1" ]; then
+        touch /mnt/app/rgd_sport || die "could not create /mnt/app/rgd_sport"
+        say "ok: sport cluster layout selected (/mnt/app/rgd_sport)"
+    elif [ "$SPORT" = "0" ]; then
+        rm -f /mnt/app/rgd_sport
+        say "ok: classic cluster layout selected"
+    elif [ -f /mnt/app/rgd_sport ]; then
+        say "keeping the sport cluster layout (/mnt/app/rgd_sport is present)"
+    fi
 
     # The shim.  mm-ipod is started by usblauncher out of a config on flash,
     # which we do not touch; instead the binary on /mnt/app is replaced by a
@@ -305,6 +324,8 @@ if [ "$RGI" != "0" ]; then
     say "Google Maps on the phone and the maneuver appears in the cluster."
     say "To turn it off later, without uninstalling anything:"
     say "  touch /mnt/app/rgd_disable   (then reboot)"
+    say "force the sport cluster layout / back to automatic, no reboot needed:"
+    say "  touch /mnt/app/rgd_sport  /  rm /mnt/app/rgd_sport"
     say "and to turn it back on, delete that file and reboot."
 fi
 say ""
