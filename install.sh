@@ -734,11 +734,15 @@ fi
 if [ "$RGI" = "0" ] && { [ -f "$RGD_JAR" ] || [ -f "$SBIN/rgd_real/mm-ipod" ]; }; then
     say ""
     say "--- route guidance: removing an earlier install (RGI=0) ---"
+    # Beside it and then over it: a running mm-ipod keeps the file busy, and
+    # writing into it fails with "cannot create".
     if [ -f "$SBIN/mm-ipod.orig" ]; then
-        cat "$SBIN/mm-ipod.orig" > "$SBIN/mm-ipod" && chmod 755 "$SBIN/mm-ipod" \
+        cp "$SBIN/mm-ipod.orig" "$SBIN/mm-ipod.new" && chmod 755 "$SBIN/mm-ipod.new" \
+            && mv "$SBIN/mm-ipod.new" "$SBIN/mm-ipod" \
             && say "restored $SBIN/mm-ipod" || die "could not restore $SBIN/mm-ipod"
     elif [ -f "$SBIN/rgd_real/mm-ipod" ]; then
-        cat "$SBIN/rgd_real/mm-ipod" > "$SBIN/mm-ipod" && chmod 755 "$SBIN/mm-ipod" \
+        cp "$SBIN/rgd_real/mm-ipod" "$SBIN/mm-ipod.new" && chmod 755 "$SBIN/mm-ipod.new" \
+            && mv "$SBIN/mm-ipod.new" "$SBIN/mm-ipod" \
             && say "restored $SBIN/mm-ipod" || die "could not restore $SBIN/mm-ipod"
     fi
     for f in "$SUPERVISOR" "$RENDER" "$ATLAS" "$BLANK" "$RGD_JAR" "$RGD_SO"; do

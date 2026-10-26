@@ -89,12 +89,18 @@ fi
 # fails, the unit still starts a stock mm-ipod with nothing preloaded.
 say ""
 say "--- route guidance (RGI) ---"
+# Beside it and then over it, as install.sh puts the shim in: a running
+# mm-ipod keeps the file busy, and writing into it fails with "cannot create".
+restore_mm_ipod() {
+    cp "$1" "$SBIN/mm-ipod.new" && chmod 755 "$SBIN/mm-ipod.new" \
+        && mv "$SBIN/mm-ipod.new" "$SBIN/mm-ipod"
+}
 if [ -f "$SBIN/mm-ipod.orig" ]; then
-    cat "$SBIN/mm-ipod.orig" > "$SBIN/mm-ipod" && chmod 755 "$SBIN/mm-ipod" \
+    restore_mm_ipod "$SBIN/mm-ipod.orig" \
         && say "restored $SBIN/mm-ipod from .orig" \
         || say "!! could not restore $SBIN/mm-ipod - do it by hand"
 elif [ -f "$SBIN/rgd_real/mm-ipod" ]; then
-    cat "$SBIN/rgd_real/mm-ipod" > "$SBIN/mm-ipod" && chmod 755 "$SBIN/mm-ipod" \
+    restore_mm_ipod "$SBIN/rgd_real/mm-ipod" \
         && say "restored $SBIN/mm-ipod from rgd_real/" \
         || say "!! could not restore $SBIN/mm-ipod - do it by hand"
 else
