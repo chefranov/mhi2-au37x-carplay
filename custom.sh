@@ -92,6 +92,11 @@ else
         echo "ETA_DEFAULT marker present - the line under the maneuver starts on the arrival time"
         E=1
     fi
+    M=
+    if [ -f "$PAYLOAD/MAP_ONLY" ]; then
+        echo "MAP_ONLY marker present - the cluster map without route guidance"
+        M=1
+    fi
     W=0
     if [ -f "$PAYLOAD/WIRELESS_MAP" ]; then
         echo "WIRELESS_MAP marker present - offering the cluster map to wireless adapters"
@@ -107,7 +112,7 @@ else
         echo "IGNORE_CONFLICTS marker present - unknown jars will not stop the install"
         I=1
     fi
-    SRC_DIR="$PAYLOAD" RGI=$R SPORT=$S ETA_DEFAULT=$E ALTSCREEN=$A WIRELESS_MAP=$W PDC=$P IGNORE_CONFLICTS=$I \
+    SRC_DIR="$PAYLOAD" RGI=$R SPORT=$S ETA_DEFAULT=$E MAP_ONLY=$M ALTSCREEN=$A WIRELESS_MAP=$W PDC=$P IGNORE_CONFLICTS=$I \
         sh "$PAYLOAD/install.sh"
 fi
 

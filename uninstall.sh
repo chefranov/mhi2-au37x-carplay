@@ -140,7 +140,7 @@ fi
 # it away with the patch is right - there is nothing left for it to disable.
 rm -f /mnt/app/rgd_disable /mnt/app/rgd_cluster_ctx /mnt/app/rgd_rgtype \
       /mnt/app/rgd_sport /mnt/app/rgd_hook.log /mnt/app/rgd_render.log \
-      /mnt/app/rgd_render_hold /mnt/app/rgd_no_tel /mnt/app/rgd_eta_default "$LIB_DIR/.rgd_render_hold_set" 2>/dev/null
+      /mnt/app/rgd_render_hold /mnt/app/rgd_no_tel /mnt/app/rgd_eta_default /mnt/app/rgd_map_only "$LIB_DIR/.rgd_render_hold_set" 2>/dev/null
 
 # The CarPlay map in the cluster: its renderer, supervisor, shaders, its on
 # switch and the steering-wheel choice.

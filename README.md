@@ -41,8 +41,10 @@ carry other versions of the HMI classes these patches replace, and installing th
 can leave the main screen black.
 If another CarPlay mod is installed on the unit, remove it first.
 
-- **CarPlay map in the cluster** needs the iPhone **by cable** — wireless CarPlay
-  adapters do not pass the cluster stream.
+- **CarPlay map in the cluster** needs the iPhone **by cable**; most wireless CarPlay
+  adapters do not pass the cluster stream. Confirmed to carry it: the Carlinkit 2Air
+  with `WIRELESS_MAP` (#25) and the Smart Box `lylink` 2921 with its test firmware
+  26060215. Zooming with the roller works by cable only.
 - **Cover art** needs module **17**, adaptation `Picture_Upload_Download` = **active**.
 - **Route guidance** works with Apple Maps and Google Maps. Waze sends no turn-by-turn
   data over CarPlay; its map still shows in the cluster.
@@ -92,6 +94,7 @@ Running the installer again upgrades in place.
 | leave out only the cluster map | `ALTSCREEN=0 sh install.sh` | `NO_ALTSCREEN` |
 | offer the cluster map to a wireless adapter that does not ask for it | `WIRELESS_MAP=1 sh install.sh` | `WIRELESS_MAP` |
 | start the line under the maneuver on the arrival time | `ETA_DEFAULT=1 sh install.sh` | `ETA_DEFAULT` |
+| the cluster map without route guidance (no maneuver tile) | `MAP_ONLY=1 sh install.sh` | `MAP_ONLY` |
 | install the parking popup beside CarPlay (P5089 and Q2 P5088 only; off by default) | `PDC=1 sh install.sh` | `PDC` |
 | let unknown jars through | `IGNORE_CONFLICTS=1 sh install.sh` | `IGNORE_CONFLICTS` |
 

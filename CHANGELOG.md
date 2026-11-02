@@ -3,6 +3,29 @@
 Each release is on the [Releases](https://github.com/chefranov/mhi2-au37x-carplay/releases)
 page, with a ready-made SD card archive.
 
+## v1.1.9 — 2026-11-02
+
+- **Black square in the cluster after switching back to the stock map** (#13, #59,
+  Chinese firmware): the maneuver tile's backing plates are now put in place before
+  they are shown and are no longer raised by a switch to the stock map, and an unused
+  overlay layer is down to one pixel. Not confirmed fixed yet; if it still shows, the
+  VIEW button clears it.
+- **The maneuver arrow appears at the start of every route**, also through a
+  wireless adapter. The cluster can raise its tile without telling the head unit,
+  and the arrow used to wait for the VIEW button. The stock map no longer flashes for
+  a moment as a CarPlay route starts.
+- **Off the road** (a route started in a car park) the empty tile keeps its plate
+  instead of showing a hole with the map in it.
+- **No dark bar under the lane arrows in the Sport layout's small view**; the other
+  views keep it.
+- **The trip line drops its "ETA" prefix** (#51): `17:42 | 23 min | 18 km`.
+- **`MAP_ONLY`**: the CarPlay map in the cluster without route guidance (#22, #38).
+- **Parking sensors over CarPlay** (with `PDC`, #42): after the reverse camera,
+  CarPlay comes back when the sensors stay on, without the "Look! Safe to move?"
+  screen and without the head unit's menu bar; the sensor background is redrawn
+  trimmed in that case too.
+- **Uninstall** no longer reports "could not restore mm-ipod".
+
 ## v1.1.8 — 2026-10-23
 
 - **The arrival-time line under the maneuver now shows the distance left too**

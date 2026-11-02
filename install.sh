@@ -94,6 +94,11 @@ SPORT=${SPORT:-}
 # leaves what is there, as with SPORT.
 ETA_DEFAULT=${ETA_DEFAULT:-}
 
+# Keep the CarPlay map in the cluster but leave route guidance to the phone's
+# own screen (1): no maneuver tile, no takeover of the cluster's route fields
+# (#22, #38).  Unset leaves what is there, as with SPORT.
+MAP_ONLY=${MAP_ONLY:-}
+
 # No `dirname` either - see the note in custom.sh.  ${0%/*} strips the last
 # /component, but leaves $0 untouched when it has no slash at all, so the
 # no-slash case has to pick "." explicitly.
@@ -644,6 +649,16 @@ SUP
         say "ok: the line under the maneuver starts on the next street"
     elif [ -f /mnt/app/rgd_eta_default ]; then
         say "keeping the arrival time first (/mnt/app/rgd_eta_default is present)"
+    fi
+
+    if [ "$MAP_ONLY" = "1" ]; then
+        touch /mnt/app/rgd_map_only || die "could not create /mnt/app/rgd_map_only"
+        say "ok: cluster map only, route guidance stays on the phone (/mnt/app/rgd_map_only)"
+    elif [ "$MAP_ONLY" = "0" ]; then
+        rm -f /mnt/app/rgd_map_only
+        say "ok: route guidance in the cluster"
+    elif [ -f /mnt/app/rgd_map_only ]; then
+        say "keeping the cluster map without route guidance (/mnt/app/rgd_map_only is present)"
     fi
 
     # The shim.  mm-ipod is started by usblauncher out of a config on flash,
