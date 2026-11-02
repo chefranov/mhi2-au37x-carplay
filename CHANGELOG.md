@@ -16,8 +16,6 @@ page, with a ready-made SD card archive.
   a moment as a CarPlay route starts.
 - **Off the road** (a route started in a car park) the empty tile keeps its plate
   instead of showing a hole with the map in it.
-- **No dark bar under the lane arrows in the Sport layout's small view**; the other
-  views keep it.
 - **The trip line drops its "ETA" prefix** (#51): `17:42 | 23 min | 18 km`.
 - **`MAP_ONLY`**: the CarPlay map in the cluster without route guidance (#22, #38).
 - **Parking sensors over CarPlay** (with `PDC`, #42): after the reverse camera,
