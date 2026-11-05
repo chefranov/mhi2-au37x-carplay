@@ -1,5 +1,8 @@
 # MHI2 AU37x CarPlay patches
 
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/chefranov)
+[![Donate via monobank](https://img.shields.io/badge/monobank-donate-black)](https://send.monobank.ua/jar/HdecLxjBN)
+
 CarPlay additions for Audi MHI2 head units on the **`MHI2_ER_AU37x`** train:
 
 - **CarPlay map in the Virtual Cockpit** — the phone's own navigation map (Apple Maps,
@@ -130,6 +133,11 @@ ssh root@172.16.250.248 'sh /mnt/app/root/carplay/uninstall.sh'
 
 or from the card: the release's `…-uninstall-sd.zip`, copied the same way as for the
 install, and the same M.I.B. menu item. Reboot.
+
+## Support
+
+This project is free and stays free. Donations are optional and don't change what you get:
+[Ko-fi](https://ko-fi.com/chefranov) or [monobank](https://send.monobank.ua/jar/HdecLxjBN).
 
 ## Credits
 
