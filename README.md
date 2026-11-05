@@ -1,5 +1,11 @@
 # MHI2 AU37x CarPlay patches
 
+[![Latest release](https://img.shields.io/github/v/release/chefranov/mhi2-au37x-carplay?sort=semver&label=release)](https://github.com/chefranov/mhi2-au37x-carplay/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/chefranov/mhi2-au37x-carplay/total)](https://github.com/chefranov/mhi2-au37x-carplay/releases)
+[![Audi A3 8V | Q2](https://img.shields.io/badge/Audi-A3%208V%20%7C%20Q2-BB0A30?logo=audi&logoColor=white)](#compatibility)
+[![MHI2 AU37x](https://img.shields.io/badge/head%20unit-MHI2%20AU37x-blue)](#compatibility)
+[![Apple CarPlay](https://img.shields.io/badge/Apple-CarPlay-black?logo=apple&logoColor=white)](#compatibility)
+[![Free to use](https://img.shields.io/badge/license-free%20to%20use-green)](LICENSE)
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/chefranov)
 [![Donate via monobank](https://img.shields.io/badge/monobank-donate-black)](https://send.monobank.ua/jar/HdecLxjBN)
 
