@@ -3,6 +3,18 @@
 Each release is on the [Releases](https://github.com/chefranov/mhi2-au37x-carplay/releases)
 page, with a ready-made SD card archive.
 
+## v1.1.10 — 2026-11-07
+
+- **Black square in the cluster after switching back to the stock map is fixed**
+  (#59, #64). Going back to the stock map, the mod restored the layout with the stock
+  maneuver box even without a stock route; it now uses the plain map layout the unit
+  itself would. Confirmed on `MHI2_CN_AU37x_P1003` and `MHI2_ER_AU37x_P3620`; the VIEW
+  workaround is no longer needed.
+- **Smoother maneuver animations** in the cluster tile: the renderer redraws less
+  per frame (about 10 % faster frames, the heaviest ones most).
+- **The maneuver comes back after a replug** when the phone resumes a route without
+  resending its maneuver list; the tile used to stay dark for the rest of the session.
+
 ## v1.1.9 — 2026-11-02
 
 - **Black square in the cluster after switching back to the stock map** (#13, #59,
