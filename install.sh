@@ -8,8 +8,8 @@
 #
 # What it does:
 #   0. Checks the firmware train and stops, changing nothing, on anything
-#      that is not MHI2_*_AU37x_* or MHI2_*_AU276_* (Audi Q2), or when
-#      another CarPlay/HMI mod is on the unit (MIBSI, mib2q-carplay-rgi,
+#      that is not MHI2_*_AU37x_* or MHI2_*_AU276_* (Audi Q2), on AU37x
+#      builds known to be too old (P3242), or when another CarPlay/HMI mod is on the unit (MIBSI, mib2q-carplay-rgi,
 #      unknown jars; IGNORE_CONFLICTS=1 lets unknown jars through).
 #      M.I.B.'s NavActiveIgnore jar is switched off, uninstall puts it back.
 #   1. Remounts /mnt/app and /mnt/system read-write.
@@ -143,7 +143,13 @@ fi
 # update leaves on rcc's persist partition; then the EEPROM, 19 bytes at 0x3A0,
 # through modifyE2P on rcc.  The unit has no xxd, sed, tr or printf, so the
 # EEPROM bytes are compared as hex: "MHI2_" at 0..4, "_AU37x_" or "_AU276_"
-# at 7..13.  A trailing CR in the text file is harmless: the pattern ends in *.
+# at 7..13, the version ("P3242") at 14..18.  A trailing CR in the text file
+# is harmless: the pattern ends in *.
+#
+# Some AU37x builds are older than the HMI classes replaced here and are
+# refused by name (TRAIN_OK=2).  P3242: compared against its lsd.jxe (#70),
+# the D-pad and route guidance do not compile - its ClusterService and
+# CarPlay input controller predate classes and constants they call.
 TRAIN=""
 for f in /net/rcc/mnt/efs-persist/SWDL/CachedTrain.txt /mnt/efs-persist/SWDL/CachedTrain.txt; do
     if [ -f "$f" ]; then
@@ -154,6 +160,7 @@ done
 
 TRAIN_OK=""
 case "$TRAIN" in
+    MHI2_*_AU37[xX]_P3242*) TRAIN_OK=2 ;;
     MHI2_*_AU37[xX]_*|MHI2_*_AU276_*) TRAIN_OK=1 ;;
     "") ;;
     *) TRAIN_OK=0 ;;
@@ -167,6 +174,8 @@ if [ -z "$TRAIN_OK" ]; then
         esac
     done
     case "$HEX" in
+        " 4"[dD]" 48 49 32 5"[fF]" "??" "??" 5"[fF]" 41 55 33 37 "[57]"8 5"[fF]" 50 33 32 34 32"*)
+            TRAIN_OK=2; TRAIN="MHI2_??_AU37x_P3242 (from EEPROM)" ;;
         " 4"[dD]" 48 49 32 5"[fF]" "??" "??" 5"[fF]" 41 55 33 37 "[57]"8 5"[fF]*)
             TRAIN_OK=1; TRAIN="MHI2_??_AU37x_* (from EEPROM)" ;;
         " 4"[dD]" 48 49 32 5"[fF]" "??" "??" 5"[fF]" 41 55 32 37 36 5"[fF]*)
@@ -184,6 +193,13 @@ case "$TRAIN_OK" in
        say "!! they can leave the main screen black. See"
        say "!! https://github.com/chefranov/mhi2-au37x-carplay/wiki/Compatibility"
        die "unsupported firmware train" ;;
+    2) say "!! firmware train: $TRAIN"
+       say "!! This AU37x build is older than the HMI classes these patches replace:"
+       say "!! the D-pad and route guidance do not match it, and installing would most"
+       say "!! likely keep the MMI from starting. Update the firmware first (P5089 is"
+       say "!! the tested build). See"
+       say "!! https://github.com/chefranov/mhi2-au37x-carplay/wiki/Compatibility"
+       die "firmware build too old" ;;
     *) say "!! could not read the firmware train (no CachedTrain.txt, no EEPROM answer)."
        say "!! Installing without knowing it is how a black main screen happens."
        say "!! Please open an issue and attach this log."
