@@ -3,6 +3,14 @@
 Each release is on the [Releases](https://github.com/chefranov/mhi2-au37x-carplay/releases)
 page, with a ready-made SD card archive.
 
+## v1.1.11 — 2026-11-09
+
+- **The installer refuses European AU37x builds up to `MHI2_ER_AU37x_P3242`** (#70).
+  Their HMI is older than the classes the mod replaces: on P3242 the D-pad and route
+  guidance don't match it, and installing would most likely keep the MMI from starting.
+  The installer now stops before changing anything and asks for a firmware update.
+  P3620 and newer, and CN and US builds, are not affected. No other changes.
+
 ## v1.1.10 — 2026-11-07
 
 - **Black square in the cluster after switching back to the stock map is fixed**
