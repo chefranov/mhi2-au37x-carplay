@@ -9,8 +9,9 @@
 # What it does:
 #   0. Checks the firmware train and stops, changing nothing, on anything
 #      that is not MHI2_*_AU37x_* or MHI2_*_AU276_* (Audi Q2), on AU37x
-#      builds known to be too old (P3242), or when another CarPlay/HMI mod is on the unit (MIBSI, mib2q-carplay-rgi,
-#      unknown jars; IGNORE_CONFLICTS=1 lets unknown jars through).
+#      ER builds up to P3242 (too old), or when another CarPlay/HMI mod is
+#      on the unit (MIBSI, mib2q-carplay-rgi, unknown jars;
+#      IGNORE_CONFLICTS=1 lets unknown jars through).
 #      M.I.B.'s NavActiveIgnore jar is switched off, uninstall puts it back.
 #   1. Remounts /mnt/app and /mnt/system read-write.
 #   2. Backs up every file it is going to change, once, as <file>.orig.
@@ -143,13 +144,38 @@ fi
 # update leaves on rcc's persist partition; then the EEPROM, 19 bytes at 0x3A0,
 # through modifyE2P on rcc.  The unit has no xxd, sed, tr or printf, so the
 # EEPROM bytes are compared as hex: "MHI2_" at 0..4, "_AU37x_" or "_AU276_"
-# at 7..13, the version ("P3242") at 14..18.  A trailing CR in the text file
+# at 7..13, the build ("P3242") at 14..18.  A trailing CR in the text file
 # is harmless: the pattern ends in *.
 #
-# Some AU37x builds are older than the HMI classes replaced here and are
-# refused by name (TRAIN_OK=2).  P3242: compared against its lsd.jxe (#70),
-# the D-pad and route guidance do not compile - its ClusterService and
-# CarPlay input controller predate classes and constants they call.
+# European AU37x builds up to P3242 are older than the HMI classes replaced
+# here and are refused (TRAIN_OK=2).  P3242: compared against its lsd.jxe
+# (#70), the D-pad and route guidance do not compile - its ClusterService and
+# CarPlay input controller predate classes and constants they call.  P3620
+# works (#64); what lies between is unknown and let through.  Build numbers
+# are per region (CN P0817 and P1003 work), so only ER builds are compared.
+ER_OLDEST_OK=3243
+
+# er_build_too_old NNNN - true when the four digits are an ER build that
+# predates ER_OLDEST_OK.  Anything that is not four digits is not judged.
+er_build_too_old() {
+    case "$1" in
+        [0-9][0-9][0-9][0-9]) [ "$1" -lt "$ER_OLDEST_OK" ] ;;
+        *) return 1 ;;
+    esac
+}
+
+# The ER build number from the EEPROM bytes: region "ER" at 5..6 (45 52),
+# "P" at 14 (50), four ASCII digits at 15..18 (3x).  Prints nothing otherwise.
+er_build_from_hex() {
+    set -- $1
+    [ $# -ge 19 ] || return 0
+    case "$6 $7 ${15}" in "45 52 50") ;; *) return 0 ;; esac
+    _n=""
+    for _b in "${16}" "${17}" "${18}" "${19}"; do
+        case "$_b" in 3[0-9]) _n="$_n${_b#3}" ;; *) return 0 ;; esac
+    done
+    echo "$_n"
+}
 TRAIN=""
 for f in /net/rcc/mnt/efs-persist/SWDL/CachedTrain.txt /mnt/efs-persist/SWDL/CachedTrain.txt; do
     if [ -f "$f" ]; then
@@ -160,7 +186,9 @@ done
 
 TRAIN_OK=""
 case "$TRAIN" in
-    MHI2_*_AU37[xX]_P3242*) TRAIN_OK=2 ;;
+    MHI2_ER_AU37[xX]_P[0-9][0-9][0-9][0-9]*)
+        ER_BUILD=${TRAIN#MHI2_ER_AU37?_P}; ER_BUILD=${ER_BUILD%"${ER_BUILD#????}"}
+        if er_build_too_old "$ER_BUILD"; then TRAIN_OK=2; else TRAIN_OK=1; fi ;;
     MHI2_*_AU37[xX]_*|MHI2_*_AU276_*) TRAIN_OK=1 ;;
     "") ;;
     *) TRAIN_OK=0 ;;
@@ -174,10 +202,13 @@ if [ -z "$TRAIN_OK" ]; then
         esac
     done
     case "$HEX" in
-        " 4"[dD]" 48 49 32 5"[fF]" "??" "??" 5"[fF]" 41 55 33 37 "[57]"8 5"[fF]" 50 33 32 34 32"*)
-            TRAIN_OK=2; TRAIN="MHI2_??_AU37x_P3242 (from EEPROM)" ;;
         " 4"[dD]" 48 49 32 5"[fF]" "??" "??" 5"[fF]" 41 55 33 37 "[57]"8 5"[fF]*)
-            TRAIN_OK=1; TRAIN="MHI2_??_AU37x_* (from EEPROM)" ;;
+            ER_BUILD=$(er_build_from_hex "$HEX")
+            if er_build_too_old "$ER_BUILD"; then
+                TRAIN_OK=2; TRAIN="MHI2_ER_AU37x_P$ER_BUILD (from EEPROM)"
+            else
+                TRAIN_OK=1; TRAIN="MHI2_??_AU37x_* (from EEPROM)"
+            fi ;;
         " 4"[dD]" 48 49 32 5"[fF]" "??" "??" 5"[fF]" 41 55 32 37 36 5"[fF]*)
             TRAIN_OK=1; TRAIN="MHI2_??_AU276_* (from EEPROM)" ;;
         "") ;;
