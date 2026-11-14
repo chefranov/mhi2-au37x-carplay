@@ -17,6 +17,8 @@ CarPlay additions for Audi MHI2 head units on the **`MHI2_ER_AU37x`** train:
   the arrow, the distance, the street and lane guidance, drawn live in 3D.
 - **Cover art** — CarPlay album artwork on the cluster's now-playing widget.
 - **Touchpad → D-pad** — the MMI touchpad navigates CarPlay menus.
+- **Maneuver arrow** fills blue as the turn gets closer. For the plain arrow:
+  `touch /mnt/app/rgd_no_arrow_fill` and reboot.
 - **Phone tab in the cluster** — CarPlay calls in the cluster's phone tab as with a
   Bluetooth phone: caller, call state and timer, accept, end, hold, mute, recents and
   favourites, signal and carrier. The **Tel** key and the phone menu go straight to

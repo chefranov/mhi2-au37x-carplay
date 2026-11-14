@@ -5,6 +5,10 @@ page, with a ready-made SD card archive.
 
 ## v1.1.12 — 2026-11-14
 
+- **The maneuver arrow fills as you approach the turn.** It rests white and fills
+  blue from its tail along with the progress bar, then flashes with the bar at the
+  turn. Idea and colours from luka-dev's mib2q-carplay-rgi. To keep the plain arrow:
+  `touch /mnt/app/rgd_no_arrow_fill` and reboot.
 - **Lane guidance no longer stays up after the turn** when the next maneuver has no
   lanes. The cluster kept the passed turn's lanes until the route ended; they now go
   as soon as the phone stops showing them. Reported upstream by luka-dev.
