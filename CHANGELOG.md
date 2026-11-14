@@ -3,6 +3,24 @@
 Each release is on the [Releases](https://github.com/chefranov/mhi2-au37x-carplay/releases)
 page, with a ready-made SD card archive.
 
+## v1.1.12 — 2026-11-14
+
+- **Lane guidance no longer stays up after the turn** when the next maneuver has no
+  lanes. The cluster kept the passed turn's lanes until the route ended; they now go
+  as soon as the phone stops showing them. Reported upstream by luka-dev.
+- **The first maneuver shows up straight away** when CarPlay connects to a route that
+  is already running, after switching navigation apps, and after a reroute. Apple
+  Maps sends a route's maneuvers before the route itself, and those used to be
+  dropped, so the tile stayed empty until the next turn.
+- **A running route no longer ends by itself** when it resumes right after a short
+  stop of guidance, and the distance of a turn you have just passed is no longer
+  shown for the next one.
+- **Roundabouts and ramps are drawn for left-hand traffic in right-hand-drive cars**
+  (UK, Cyprus, …) when the navigation app doesn't say which side the traffic drives
+  on. The app's own value still wins.
+- **Sport layout:** the progress bar beside the maneuver starts lower, clear of the
+  line the cluster draws across the top of the well.
+
 ## v1.1.11 — 2026-11-09
 
 - **The installer refuses European AU37x builds up to `MHI2_ER_AU37x_P3242`** (#70).
