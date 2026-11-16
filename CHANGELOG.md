@@ -3,9 +3,32 @@
 Each release is on the [Releases](https://github.com/chefranov/mhi2-au37x-carplay/releases)
 page, with a ready-made SD card archive.
 
-## Unreleased
+## v1.1.13 — 2026-11-16
 
-Installer and uninstaller only; the patches themselves are those of v1.1.12.
+A robustness release: no new features. The fixes below come from a review of the
+code, not from reported faults, so most of them you should never notice.
+
+**Patches**
+
+- **A dropped connection inside the head unit can no longer take CarPlay down.** The
+  route-guidance hook wrote to a socket that the HMI could have closed already, which
+  would have ended the iPhone process.
+- **The cluster keeps following you after an internal error.** The task that decides
+  what the cluster shows (phone map, maneuver, stock map) used to stop for good on its
+  first unexpected error, until the next reboot. It now logs it and carries on.
+- **Timers no longer depend on the head unit's clock,** which jumps when the time is
+  synchronised. A jump could hold back or cut short the waits around route start,
+  route end and reconnecting.
+- **The cluster map stream ends cleanly with its CarPlay session,** instead of leaving
+  its threads waiting on a connection that is gone, and the hook announces itself
+  again if the first attempt was lost.
+- **After a route the stock navigation gets its own state back** in one more case
+  where the restore could be skipped.
+- **Lane guidance and the progress bar take fewer drawing calls** per frame.
+- **Cover art:** oversized pictures are refused instead of decoded.
+- **Street names** cut at the length limit no longer end in half a character.
+
+**Installer and uninstaller**
 
 - **A stopped install no longer tells you to reboot.** The SD card script now says
   plainly when the installer stopped, and leaves a copy of the log on the card
