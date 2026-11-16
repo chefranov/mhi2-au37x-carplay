@@ -15,6 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check the scripts parse
+        run: |
+          set -eu
+          for f in install.sh uninstall.sh custom.sh command.sh bin/altscreen_sup.sh; do sh -n "$f"; done
+
       - name: Build the SD card archives
         run: |
           set -eu

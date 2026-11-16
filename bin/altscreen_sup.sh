@@ -28,6 +28,7 @@ echo $$ > "$LOCK"
 # writable mount is harmless.
 mount -uw /mnt/app 2>/dev/null
 
+quick=0
 while [ -f "$MARKER" ]; do
     "$BIN" --listen >> "$LOG" 2>&1
     rc=$?
@@ -38,6 +39,15 @@ while [ -f "$MARKER" ]; do
     # sender or picture size takes a fresh one - and the hook is already
     # reconnecting: two seconds here were two seconds of the stock map.  A
     # crash still waits.
-    [ "$rc" -eq 0 ] || sleep 2
+    # A renderer that exits 0 straight away, over and over, would spin a core:
+    # there is no clock here to time an exit with, so every twentieth planned
+    # restart in a row waits as well.
+    if [ "$rc" -eq 0 ]; then
+        quick=$((quick + 1))
+        [ "$quick" -lt 20 ] || { quick=0; sleep 2; }
+    else
+        quick=0
+        sleep 2
+    fi
 done
 rm -f "$LOCK"

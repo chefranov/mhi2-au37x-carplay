@@ -3,6 +3,32 @@
 Each release is on the [Releases](https://github.com/chefranov/mhi2-au37x-carplay/releases)
 page, with a ready-made SD card archive.
 
+## Unreleased
+
+Installer and uninstaller only; the patches themselves are those of v1.1.12.
+
+- **A stopped install no longer tells you to reboot.** The SD card script now says
+  plainly when the installer stopped, and leaves a copy of the log on the card
+  (`mod/carplay/last_run.log`) to attach to an issue.
+- **Nothing is written before every check has passed.** An unexpected
+  `smartphone_integrator.json` or a missing `mm-ipod` used to stop the install after
+  the jars were already copied.
+- **Files are replaced in one step.** The jars and the config are written beside the
+  old file and renamed over it, so an interrupted write cannot leave half a jar on the
+  HMI's classpath or a cut-off config.
+- **The config backup follows the firmware.** It is taken again on every install from a
+  config without the hook, so uninstalling after a firmware update no longer puts the
+  old firmware's file back. Uninstall also removes the hook from a backup that already
+  carried it.
+- **After a firmware update that replaced `mm-ipod`**, the installer saves the new
+  binary instead of starting the old one.
+- **`NO_RGI` installs also remove the old maneuver pictures** (about 90 MB) left by
+  releases before 2026-09-19.
+- **`NO_SPORT`, `NO_ETA_DEFAULT`, `NO_MAP_ONLY`** on the card switch those options back
+  off; until now that took a cable.
+- The route-guidance hook is no longer loaded into the renderers and their supervisor,
+  only into `mm-ipod`.
+
 ## v1.1.12 — 2026-11-14
 
 - **The maneuver arrow fills as you approach the turn.** It rests white and fills

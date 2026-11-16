@@ -26,7 +26,8 @@
 #   6. Installs the CarPlay map in the cluster (AltScreen): its renderer, the
 #      renderer's compiled shaders and supervisor, and the marker that turns
 #      it on.  Needs route guidance; skip it alone with ALTSCREEN=0.
-#   7. Removes the pre-drawn maneuver frames, if an older install left them.
+#   7. Removes the pre-drawn maneuver frames, if an older install left them
+#      (with or without route guidance).
 #   8. Undoes a part left out this time (RGI=0, ALTSCREEN=0) that an earlier
 #      install put there, and drops files earlier releases used and this one
 #      does not.
@@ -364,6 +365,26 @@ if ! grep "libcarplay_hook.so" "$CFG" > /dev/null 2>&1; then
     done < "$CFG"
 fi
 
+# The two things the later steps would stop on, asked now, while stopping
+# still leaves the unit untouched: the config must have exactly one carplay env
+# line to add the hook to, and mm-ipod must be where the shim goes.
+if ! grep "libcarplay_hook.so" "$CFG" > /dev/null 2>&1; then
+    HITS=0
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in *IPL_CONFIG_DIR_DIO_MANAGER*) HITS=$((HITS + 1)) ;; esac
+    done < "$CFG"
+    if [ "$HITS" != "1" ]; then
+        say "!! $CFG: expected exactly 1 carplay env line, found $HITS."
+        say "!!   Unexpected firmware layout - please open an issue and attach this log."
+        CONFLICT=1
+    fi
+fi
+if [ "$RGI" != "0" ] && [ ! -f "$SBIN/mm-ipod" ]; then
+    say "!! $SBIN/mm-ipod not found - unexpected firmware layout."
+    say "!!   Route guidance cannot be installed here; RGI=0 (NO_RGI on the card) leaves it out."
+    CONFLICT=1
+fi
+
 # The jars the HMI loads.  lsd.sh puts every *.jar and *.zip in this directory
 # on the classpath, so the names say what is there.
 for j in "$JARS_DIR"/*.jar "$JARS_DIR"/*.zip; do
@@ -402,7 +423,7 @@ if [ -n "$UNKNOWN" ]; then
     fi
 fi
 
-[ "$CONFLICT" = "0" ] || die "another mod is in the way - see above"
+[ "$CONFLICT" = "0" ] || die "another mod or an unexpected layout is in the way - see above"
 
 # M.I.B.'s NavActiveIgnore replaces org.dsi.ifc.carplay.AppState so that every
 # app state and owner reads 0, and the HMI loses track of what CarPlay owns.
@@ -426,18 +447,24 @@ rm -f /mnt/system/.rwtest
 say "ok: /mnt/app and /mnt/system are writable"
 
 # ---------------------------------------------------------------- backup
-backup_once() {
-    if [ -f "$1" ] && [ ! -f "$1.orig" ]; then
-        cp -p "$1" "$1.orig" || die "could not back up $1"
-        say "backed up: $1 -> $1.orig"
-    elif [ -f "$1.orig" ]; then
-        say "backup already present: $1.orig (kept, not overwritten)"
-    fi
-}
-
 say ""
 say "--- backups ---"
-backup_once "$CFG"
+# The config's backup is what uninstall restores, so it has to be the config
+# as it is without our hook - and it has to follow the firmware: one kept
+# from before a firmware update would put the old firmware's file back.  So
+# it is refreshed whenever the config on the unit carries no hook of ours, and
+# never taken from one that does (a hook added by hand before the first run).
+if grep "libcarplay_hook.so" "$CFG" > /dev/null 2>&1; then
+    if [ -f "$CFG.orig" ]; then
+        say "backup already present: $CFG.orig (kept, not overwritten)"
+    else
+        say "no backup taken: $CFG already carries the hook; uninstall strips it line by line"
+    fi
+else
+    cp -p "$CFG" "$CFG.orig.new" && mv "$CFG.orig.new" "$CFG.orig" \
+        || { rm -f "$CFG.orig.new"; die "could not back up $CFG"; }
+    say "backed up: $CFG -> $CFG.orig"
+fi
 
 for n in $NAVIGNORE; do
     mv "$JARS_DIR/$n" "$JARS_DIR/$n.carplay-off" || die "could not switch off $JARS_DIR/$n"
@@ -447,13 +474,37 @@ done
 # uninstall is just deleting them again.
 
 # ---------------------------------------------------------------- copy
+# is_elf FILE - true only when FILE starts with the ELF magic.  Positive
+# evidence of a binary: "not a script" is not enough to act on, a shim taken
+# for the real mm-ipod and copied aside would then exec itself for ever.
+is_elf() {
+    _l=""
+    IFS= read -r _l < "$1" 2>/dev/null
+    case "$_l" in ?ELF*) return 0 ;; esac
+    return 1
+}
+
+# put_file SRC DEST MODE - copy beside the target, then rename over it.
+# On an upgrade the HMI has the old jar open and dio_manager the old .so
+# mapped: a plain cp writes through the file a running process is using, and
+# one cut short leaves half a jar on the classpath.  rename() swaps the
+# directory entry instead; whoever holds the old file keeps it until the
+# reboot.  lsd.sh takes *.jar and *.zip only, so a leftover .new is inert.
+put_file() {
+    cp "$1" "$2.new" || { rm -f "$2.new"; return 1; }
+    chmod "$3" "$2.new"
+    mv "$2.new" "$2" || { rm -f "$2.new"; return 1; }
+}
+
 say ""
 say "--- copying files ---"
 [ -d "$JARS_DIR" ] || mkdir -p "$JARS_DIR" || die "could not create $JARS_DIR"
 [ -d "$LIB_DIR" ] || mkdir -p "$LIB_DIR" || die "could not create $LIB_DIR"
 
-cp "$BIN_DIR/dpad_hook.jar" "$JARS_DIR/dpad_hook.jar" || die "copy dpad_hook.jar failed"
-cp "$BIN_DIR/coverart_hook.jar" "$JARS_DIR/coverart_hook.jar" || die "copy coverart_hook.jar failed"
+# Modes are set explicitly: on the M.I.B. path the source is a FAT32 card,
+# which carries no Unix modes, and lsd skips an unreadable jar without a word.
+put_file "$BIN_DIR/dpad_hook.jar" "$JARS_DIR/dpad_hook.jar" 755 || die "copy dpad_hook.jar failed"
+put_file "$BIN_DIR/coverart_hook.jar" "$JARS_DIR/coverart_hook.jar" 755 || die "copy coverart_hook.jar failed"
 
 # The hook goes in via rename, not a plain cp over the top. On an upgrade
 # dio_manager may be running right now with the old .so mapped, and writing
@@ -478,8 +529,7 @@ say "ok: $JARS_DIR/coverart_hook.jar"
 # directory is missing and the stock background stays.
 PDC_BG_DIR=/mnt/app/eso/hmi/lsd/images/HMIEarlyAppsEvoHighScale
 if [ "$PDC" = "1" ]; then
-    cp "$BIN_DIR/pdc_hook.jar" "$JARS_DIR/pdc_hook.jar" || die "copy pdc_hook.jar failed"
-    chmod 755 "$JARS_DIR/pdc_hook.jar"
+    put_file "$BIN_DIR/pdc_hook.jar" "$JARS_DIR/pdc_hook.jar" 755 || die "copy pdc_hook.jar failed"
     say "ok: $JARS_DIR/pdc_hook.jar"
     if [ -d "$PDC_BG_DIR" ] && [ -f "$BIN_DIR/2199999.png" ]; then
         cp "$BIN_DIR/2199999.png" "$PDC_BG_DIR/2199999.png" && chmod 644 "$PDC_BG_DIR/2199999.png" \
@@ -513,7 +563,11 @@ say "--- smartphone_integrator.json ---"
 if grep "libcarplay_hook.so" "$CFG" > /dev/null 2>&1; then
     say "our LD_PRELOAD is already on the carplay child - leaving the config alone"
 else
+    # Built in a copy made with cp -p, so it has the config's own mode and
+    # owner, and renamed over the config at the end: the config is either the
+    # old file or the whole new one, never one cut short by a failed write.
     NEW=$CFG.new
+    cp -p "$CFG" "$NEW" || die "cannot write $NEW"
     : > "$NEW" || die "cannot write $NEW"
     HITS=0
     CONFLICT=0
@@ -530,8 +584,11 @@ else
                         echo "$line" >> "$NEW"
                         ;;
                     *"]"*)
+                        # Whatever follows the bracket is kept as it was (a
+                        # comma on stock; none if the array ends the object).
                         head=${line%%"]"*}
-                        echo "$head, \"LD_PRELOAD=$SO_DEST\"]," >> "$NEW"
+                        tail=${line#*"]"}
+                        echo "$head, \"LD_PRELOAD=$SO_DEST\"]$tail" >> "$NEW"
                         ;;
                     *,)
                         echo "$line \"LD_PRELOAD=$SO_DEST\"," >> "$NEW"
@@ -560,11 +617,7 @@ else
         die "patched config does not contain the hook - config not touched"
     }
 
-    # Write through the existing file rather than replacing it, so the config
-    # keeps its own mode and owner whatever they are. If this ever fails
-    # half-way the stock file is still at $CFG.orig.
-    cat "$NEW" > "$CFG" || die "could not write $CFG (backup is at $CFG.orig)"
-    rm -f "$NEW"
+    mv "$NEW" "$CFG" || { rm -f "$NEW"; die "could not replace $CFG - it is unchanged"; }
     say "ok: LD_PRELOAD=$SO_DEST added to the carplay child"
 fi
 
@@ -573,8 +626,7 @@ if [ "$RGI" != "0" ]; then
     say ""
     say "--- route guidance (RGI) ---"
 
-    cp "$BIN_DIR/rgd_hook.jar" "$RGD_JAR" || die "copy rgd_hook.jar failed"
-    chmod 755 "$RGD_JAR"
+    put_file "$BIN_DIR/rgd_hook.jar" "$RGD_JAR" 755 || die "copy rgd_hook.jar failed"
     say "ok: $RGD_JAR"
 
     cp "$BIN_DIR/librgd_hook.so" "$RGD_SO.new" || die "copy librgd_hook.so failed"
@@ -654,26 +706,6 @@ SUP
     mv "$SUPERVISOR.new" "$SUPERVISOR" || die "could not install $SUPERVISOR"
     say "ok: $SUPERVISOR"
 
-    # Upgrade from a release that drew maneuvers from pre-drawn pictures: about
-    # 90 MB of PNGs in three sets, which nothing reads any more. Explicit paths
-    # and explicit file names, never "rm -rf $VAR" - one empty variable there
-    # would take the whole lib directory with it.
-    if [ -d "$FRAMES_DIR" ]; then
-        say "removing the old maneuver frames (~90 MB, no longer used)..."
-        for stage in small large large_sport; do
-            [ -d "$FRAMES_DIR/$stage" ] || continue
-            rm -f "$FRAMES_DIR/$stage"/*.png "$FRAMES_DIR/$stage"/frames.idx 2>/dev/null
-            # The unit has no rmdir, and its rm needs -r for a directory.
-            rm -r "$FRAMES_DIR/$stage" 2>/dev/null
-        done
-        rm -r "$FRAMES_DIR" 2>/dev/null
-        if [ -d "$FRAMES_DIR" ]; then
-            say "note: $FRAMES_DIR is still there - its files are gone, the empty directory is harmless"
-        else
-            say "ok: removed $FRAMES_DIR"
-        fi
-    fi
-
     # The layout is normally read from the head unit itself (the cluster's
     # menu reaches it as a skin).  The marker forces the sport layout on a unit
     # where that does not follow; it can be changed any time without a reboot
@@ -721,22 +753,35 @@ SUP
         cp -p "$SBIN/mm-ipod" "$SBIN/rgd_real/mm-ipod" || die "could not copy mm-ipod aside"
         cp -p "$SBIN/mm-ipod" "$SBIN/mm-ipod.orig" || die "could not back up mm-ipod"
         say "saved the original mm-ipod ($SBIN/mm-ipod.orig)"
-    else
+    elif ! is_elf "$SBIN/mm-ipod"; then
         say "shim already installed - refreshing it"
+    else
+        # rgd_real/ is there but mm-ipod is a binary again: a firmware update
+        # or a restore by hand put it back.  That binary is the one to run
+        # from now on - the copy kept aside is the old firmware's.
+        cp -p "$SBIN/mm-ipod" "$SBIN/rgd_real/mm-ipod.new" \
+            && mv "$SBIN/rgd_real/mm-ipod.new" "$SBIN/rgd_real/mm-ipod" \
+            || die "could not copy the new mm-ipod aside"
+        cp -p "$SBIN/mm-ipod" "$SBIN/mm-ipod.orig" || die "could not back up mm-ipod"
+        say "mm-ipod was replaced since the last install - saved the new one ($SBIN/mm-ipod.orig)"
     fi
 
     cat > "$SBIN/mm-ipod.new" <<'SHIM'
 #!/bin/sh
 # Route-guidance shim.  The real binary is in rgd_real/ under its own name so
 # argv[0] stays "mm-ipod" - the hook gates on that.
-# Off switch: touch /mnt/app/rgd_disable, then replug the phone.
-[ -f /mnt/app/rgd_disable ] || LD_PRELOAD=/mnt/app/eso/hmi/lib/librgd_hook.so
-export LD_PRELOAD
+# Off switch: touch /mnt/app/rgd_disable, then reboot.
 # The cluster renderer is a process of its own, and this shim is the one thing
 # that already runs exactly when a CarPlay session starts.  Its supervisor is a
-# singleton, so the replug that restarts mm-ipod does not stack copies.
+# singleton, so a second mm-ipod does not stack copies.  Started BEFORE the
+# preload is set: the hook is for mm-ipod alone, and set first it was loaded
+# into the supervisor, both renderers and every sleep they run.
 [ -f /mnt/app/rgd_disable ] || [ ! -x /mnt/app/eso/hmi/lib/rgd_render_sup.sh ] || \
     /mnt/app/eso/hmi/lib/rgd_render_sup.sh &
+if [ ! -f /mnt/app/rgd_disable ]; then
+    LD_PRELOAD=/mnt/app/eso/hmi/lib/librgd_hook.so
+    export LD_PRELOAD
+fi
 exec /mnt/app/armle/usr/sbin/rgd_real/mm-ipod "$@"
 SHIM
     chmod 755 "$SBIN/mm-ipod.new"
@@ -814,6 +859,27 @@ if [ "$RGI" = "0" ] && { [ -f "$RGD_JAR" ] || [ -f "$SBIN/rgd_real/mm-ipod" ]; }
         rm -f "$SHADER_DIR"/*.bin 2>/dev/null
         rm -r "$SHADER_DIR" 2>/dev/null
         say "removed: $SHADER_DIR"
+    fi
+fi
+
+# Whether route guidance is installed or left out: the frames are nobody's.
+# Upgrade from a release that drew maneuvers from pre-drawn pictures: about
+# 90 MB of PNGs in three sets, which nothing reads any more. Explicit paths
+# and explicit file names, never "rm -rf $VAR" - one empty variable there
+# would take the whole lib directory with it.
+if [ -d "$FRAMES_DIR" ]; then
+    say "removing the old maneuver frames (~90 MB, no longer used)..."
+    for stage in small large large_sport; do
+        [ -d "$FRAMES_DIR/$stage" ] || continue
+        rm -f "$FRAMES_DIR/$stage"/*.png "$FRAMES_DIR/$stage"/frames.idx 2>/dev/null
+        # The unit has no rmdir, and its rm needs -r for a directory.
+        rm -r "$FRAMES_DIR/$stage" 2>/dev/null
+    done
+    rm -r "$FRAMES_DIR" 2>/dev/null
+    if [ -d "$FRAMES_DIR" ]; then
+        say "note: $FRAMES_DIR is still there - its files are gone, the empty directory is harmless"
+    else
+        say "ok: removed $FRAMES_DIR"
     fi
 fi
 

@@ -108,6 +108,10 @@ Running the installer again upgrades in place.
 | install the parking popup beside CarPlay (P5089 and Q2 P5088 only; off by default) | `PDC=1 sh install.sh` | `PDC` |
 | let unknown jars through | `IGNORE_CONFLICTS=1 sh install.sh` | `IGNORE_CONFLICTS` |
 
+`SPORT`, `ETA_DEFAULT` and `MAP_ONLY` stay set across later installs. To switch one back
+off: `SPORT=0`, `ETA_DEFAULT=0` or `MAP_ONLY=0` by cable, or an empty `NO_SPORT`,
+`NO_ETA_DEFAULT` or `NO_MAP_ONLY` file on the card.
+
 Step by step, and what gets changed on the unit:
 **[Installation](https://github.com/chefranov/mhi2-au37x-carplay/wiki/Installation)**.
 

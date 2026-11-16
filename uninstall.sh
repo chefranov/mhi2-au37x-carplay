@@ -42,44 +42,64 @@ mount -uw /mnt/system 2>/dev/null
 # ---------------------------------------------------------------- config
 say ""
 say "--- smartphone_integrator.json ---"
-if [ -f "$CFG.orig" ]; then
-    # cat, not cp: writes through the existing file so its mode and owner
-    # stay exactly as the unit had them.
-    cat "$CFG.orig" > "$CFG" && say "restored from $CFG.orig" \
-        || say "!! could not restore $CFG - do it by hand"
-elif grep "libcarplay_hook.so" "$CFG" > /dev/null 2>&1; then
-    # No backup (installed by hand?). Strip our entry line-based instead.
-    NEW=$CFG.new
-    : > "$NEW"
+# replace_cfg SRC - put SRC's content in place of the config.  Built in a copy
+# made with cp -p, so it keeps the config's own mode and owner, and renamed
+# over it: the config is either the old file or the whole new one.
+replace_cfg() {
+    cp -p "$CFG" "$CFG.new" && cat "$1" > "$CFG.new" && mv "$CFG.new" "$CFG" && return 0
+    rm -f "$CFG.new"
+    return 1
+}
+
+# strip_cfg - take our LD_PRELOAD entry off the carplay child's env line,
+# line-based.  Only our entry, never the stock LD_PRELOAD on the other child.
+strip_cfg() {
+    TMP=$CFG.strip
+    : > "$TMP" || return 1
     while IFS= read -r line || [ -n "$line" ]; do
         case "$line" in
             *LD_PRELOAD*libcarplay_hook.so*"]"*)
+                # Whatever followed our entry is kept: the bracket and, on
+                # stock, the comma after it.
                 head=${line%%", \"LD_PRELOAD"*}
-                echo "$head]," >> "$NEW"
+                tail=${line##*"libcarplay_hook.so\""}
+                echo "$head$tail" >> "$TMP"
                 ;;
             *LD_PRELOAD*libcarplay_hook.so*,)
                 # An array written one entry per line (see install.sh).
                 head=${line%%" \"LD_PRELOAD"*}
-                echo "$head" >> "$NEW"
+                echo "$head" >> "$TMP"
                 ;;
             *LD_PRELOAD*libcarplay_hook.so*)
                 head=${line%%", \"LD_PRELOAD"*}
-                echo "$head" >> "$NEW"
+                echo "$head" >> "$TMP"
                 ;;
             *)
-                echo "$line" >> "$NEW"
+                echo "$line" >> "$TMP"
                 ;;
         esac
     done < "$CFG"
-    # Only our entry, never the stock LD_PRELOAD on the other child.
-    if grep "libcarplay_hook.so" "$NEW" > /dev/null 2>&1; then
-        rm -f "$NEW"
-        say "!! could not strip LD_PRELOAD automatically - edit $CFG by hand"
-    else
-        cat "$NEW" > "$CFG" && say "LD_PRELOAD removed"
-        rm -f "$NEW"
+    if grep "libcarplay_hook.so" "$TMP" > /dev/null 2>&1; then
+        rm -f "$TMP"
+        return 1
     fi
-else
+    replace_cfg "$TMP"
+    rc=$?
+    rm -f "$TMP"
+    return $rc
+}
+
+if [ -f "$CFG.orig" ]; then
+    replace_cfg "$CFG.orig" && say "restored from $CFG.orig" \
+        || say "!! could not restore $CFG - do it by hand"
+fi
+# Also after a restore: a backup taken from a config that already carried the
+# hook (added by hand before the first install) puts the hook straight back,
+# and the library it names is deleted below.
+if grep "libcarplay_hook.so" "$CFG" > /dev/null 2>&1; then
+    strip_cfg && say "LD_PRELOAD removed" \
+        || say "!! could not strip LD_PRELOAD automatically - edit $CFG by hand"
+elif [ ! -f "$CFG.orig" ]; then
     say "no LD_PRELOAD in the config - nothing to undo"
 fi
 
@@ -140,7 +160,10 @@ fi
 # it away with the patch is right - there is nothing left for it to disable.
 rm -f /mnt/app/rgd_disable /mnt/app/rgd_cluster_ctx /mnt/app/rgd_rgtype \
       /mnt/app/rgd_sport /mnt/app/rgd_hook.log /mnt/app/rgd_render.log \
-      /mnt/app/rgd_render_hold /mnt/app/rgd_no_tel /mnt/app/rgd_eta_default /mnt/app/rgd_map_only "$LIB_DIR/.rgd_render_hold_set" 2>/dev/null
+      /mnt/app/rgd_render_hold /mnt/app/rgd_no_tel /mnt/app/rgd_eta_default /mnt/app/rgd_map_only "$LIB_DIR/.rgd_render_hold_set" \
+      /mnt/app/rgd_no_arrow_fill /mnt/app/rgd_rearm /mnt/app/rgd_maps30 /mnt/app/pdc_log \
+      /mnt/app/rgd_hook.log.prev /mnt/app/carplay_hook.log \
+      /mnt/app/.mhi2_trace /mnt/app/.mhi2_trace_keep /mnt/app/.mhi2_trace_all 2>/dev/null
 
 # The CarPlay map in the cluster: its renderer, supervisor, shaders, its on
 # switch and the steering-wheel choice.
@@ -153,7 +176,8 @@ if [ -d "$LIB_DIR/altscreen_shaders" ]; then
     say "removed: $LIB_DIR/altscreen_shaders"
 fi
 rm -f /mnt/app/altscreen_inject /mnt/app/altscreen_force /mnt/app/altscreen_cluster_off \
-      /mnt/app/altscreen_render.log /mnt/app/altscreen_probe.log 2>/dev/null
+      /mnt/app/altscreen_render.log /mnt/app/altscreen_probe.log \
+      /mnt/app/altscreen_sw /mnt/app/altscreen_url /mnt/app/altscreen_toggle_key 2>/dev/null
 
 say ""
 say "--- removing files ---"
